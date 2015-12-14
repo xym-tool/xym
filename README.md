@@ -4,10 +4,34 @@
 
 xym is a simple utility for extracting yang modules from files. Its module dependencies are documented in [requirements.txt](requirements.txt).
 
+xym may be installed via PyPi, or the latest version may be picked up from here and manually installed (along with its dependencies). It can often be sensible to install tools into a virtualenv, which is recommended. For example:
+
+```
+$ git clone https://github.com/xym-tool/xym.git
+Cloning into 'xym'...
+remote: Counting objects: 32, done.
+remote: Compressing objects: 100% (20/20), done.
+remote: Total 32 (delta 8), reused 29 (delta 5), pack-reused 0
+Unpacking objects: 100% (32/32), done.
+Checking connectivity... done.
+$ cd xym
+$ virtualenv v
+New python executable in v/bin/python2.7
+Not overwriting existing python script v/bin/python (you must use v/bin/python2.7)
+Installing setuptools, pip, wheel...done.
+$ . v/bin/activate
+$ python setup.py install
+running install
+...
+...
+Finished processing dependencies for xym==0.2
+$
+```
+
 Help with it's options may be displayed thus:
 
 ```
-$ ./xym.py --help
+$ xym --help
 usage: xym.py [-h] [--srcdir SRCDIR] [--dstdir DSTDIR] [--strict]
                [--strict-examples] [--debug DEBUG]
                source
@@ -54,10 +78,11 @@ ERROR: 'test-file.txt', Line 47 - Yang module 'example-error' with <CODE BEGINS>
 
 ## Testing
 
-xym has a simple set of tests exercising a subset of functionality. These may be invoked while in the xym subdirectory thus:
+xym has a simple set of tests exercising a subset of functionality. Woth xym installed, these may be invoked while in the test subdirectory thus:
 
 ```
-$ python -m unittest xym
+$ cd test
+$ python -m unittest test
 ```
 
 Expected output is:
