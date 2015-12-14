@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/xym-tool/xym.svg)](https://travis-ci.org/xym-tool/xym)
+
 # xym.py
 
 xym is a simple utility for extracting yang modules from files. Its module dependencies are documented in [requirements.txt](requirements.txt).
