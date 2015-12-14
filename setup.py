@@ -14,7 +14,7 @@ setup(
   author = 'Jan Medved',
   author_email = 'jmedved@cisco.com',
   license = 'New-style BSD',
-  url = 'https://github.com/cmoberg/xym',
+  url = 'https://github.com/xym-tool/xym',
   install_requires = ['requests>=2.6'],
   include_package_data = True,
   keywords = ['yang', 'extraction'],
