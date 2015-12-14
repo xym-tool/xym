@@ -29,6 +29,10 @@ def run():
 		default=0,
 		help="Optional: debug level - determines the amount of debug "
 		"info printed to console; default is 0 (no debug info printed)")
+	parser.add_argument("--version",
+		action='version',
+		version='%(prog)s {version}'.format(version=xym.__version__))
+
 	args = parser.parse_args()
 
 	extracted_models = xym(args.source,
