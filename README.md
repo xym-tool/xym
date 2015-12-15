@@ -2,9 +2,9 @@
 
 # xym.py
 
-xym is a simple utility for extracting yang modules from files. Its module dependencies are documented in [requirements.txt](requirements.txt).
+xym is a simple utility for extracting yang modules from files, and may be installed via PyPi, or the latest version may be picked up from here and manually installed (along with its dependencies).
 
-xym may be installed via PyPi, or the latest version may be picked up from here and manually installed (along with its dependencies). It can often be sensible to install tools into a virtualenv, which is recommended. For example:
+It can often be sensible to install tools into a virtualenv, which is recommended. For example:
 
 ```
 $ git clone https://github.com/xym-tool/xym.git
@@ -28,7 +28,7 @@ Finished processing dependencies for xym==0.2
 $
 ```
 
-Help with it's options may be displayed thus:
+Help, with it's options, may be displayed thus:
 
 ```
 $ xym --help
@@ -78,14 +78,14 @@ ERROR: 'test-file.txt', Line 47 - Yang module 'example-error' with <CODE BEGINS>
 
 ## Testing
 
-xym has a simple set of tests exercising a subset of functionality. Woth xym installed, these may be invoked while in the test subdirectory thus:
+xym has a simple set of tests exercising a subset of functionality. With xym installed, these may be invoked while in the test subdirectory thus:
 
 ```
 $ cd test
 $ python -m unittest test
 ```
 
-Expected output is:
+Example output is:
 
 ```
 $ python -m unittest xym
@@ -102,3 +102,5 @@ Ran 3 tests in 0.004s
 OK
 $
 ```
+
+This will change as functionality and testing progresses.
