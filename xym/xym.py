@@ -204,7 +204,7 @@ class YangModuleExtractor:
                     i += 1
                     # Skip over empty lines until the next page header is found
                     while i < len(content):
-                        cnt = content[i].strip(' \r\n')
+                        cnt = content[i].strip(' \r\n\t\f')
                         # print('%d: cnt - %s ' % (i, ':'.join(x.encode('hex') for x in content[i])))
                         if cnt != '':
                             break
