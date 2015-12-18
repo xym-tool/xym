@@ -12,11 +12,11 @@ from requests.packages.urllib3 import disable_warnings
 import subprocess
 import unittest
 
-__author__ = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com'
+__author__ = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com, einarnn@gmail.com'
 __copyright__ = "Copyright(c) 2015, Cisco Systems, Inc."
 __license__ = "New-style BSD"
 __email__ = "jmedved@cisco.com"
-__version__ = "0.2"
+__version__ = "0.3"
 
 if sys.version_info < (2, 7, 9):
     disable_warnings()
