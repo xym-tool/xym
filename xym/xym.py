@@ -49,7 +49,7 @@ class YangModuleExtractor:
     CODE_BEGINS_TAG = re.compile('^[ \t]*<CODE BEGINS>( *file( +"(.*)")?)?.*$')
     EXAMPLE_TAG = re.compile('^(example-)')
 
-    def __init__(self, src_id, dst_dir, strict=True, debug_level=0, strict_examples=True):
+    def __init__(self, src_id, dst_dir, strict=True, strict_examples=True, debug_level=0):
         """
         Initializes class-global variables.
         :param src_id: text string containing the draft or RFC text from which YANG
