@@ -2,7 +2,7 @@
 
 # xym.py
 
-xym is a simple utility for extracting yang modules from files. Its module dependencies are documented in [requirements.txt](requirements.txt).
+xym is a simple utility for extracting [YANG](https://tools.ietf.org/rfc/rfc6020.txt) modules from files.
 
 xym may be installed via PyPi, or the latest version may be picked up from here and manually installed (along with its dependencies). It can often be sensible to install tools into a virtualenv, which is recommended. For example:
 
@@ -55,6 +55,7 @@ optional arguments:
   --debug DEBUG      Optional: debug level - determines the amount of debug
                      info printed to console; default is 0 (no debug info
                      printed)
+  --version          show program's version number and exit
 ```
 
 The following behavior is implemented with respect to the "strict" and "strict-exmaples" options (none of the other options influence this behavior):

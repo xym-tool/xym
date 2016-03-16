@@ -6,9 +6,9 @@ def read(fname):
 
 setup(
   name = 'xym',
-  version = '0.2',
-  description = ('A tool to extract YANG modules from IETF RFCs and Drafts'),
-  long_description=read('README.md'),
+  version = '0.3',
+  description = ('A tool to fetch and extract YANG modules from IETF RFCs and Drafts'),
+  long_description = """xym is a simple tool for fetching and extracting YANG modules from IETF RFCs and drafts as local files and from URLs."""
   packages = ['xym'],
   scripts = ['bin/xym'],
   author = 'Jan Medved',

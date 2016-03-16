@@ -16,7 +16,7 @@ __author__ = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com'
 __copyright__ = "Copyright(c) 2015, Cisco Systems, Inc."
 __license__ = "New-style BSD"
 __email__ = "jmedved@cisco.com"
-__version__ = "0.2"
+__version__ = "0.3"
 
 if sys.version_info < (2, 7, 9):
     disable_warnings()
@@ -57,6 +57,7 @@ class YangModuleExtractor:
         :param dst_dir: Directory where to put the extracted YANG module(s)
         :param strict: Mode - if 'True', enforce <CODE BEGINS> / <CODE ENDS>;
                        if 'False', just look for 'module <name> {' and '}'
+        :param strict_examples: Only output valid examples when in strict mode
         :param debug_level: If > 0 print some debug statements to the console
         :return:
         """
@@ -272,6 +273,7 @@ def xym(source_id, srcdir, dstdir, strict, strict_examples, debug_level):
            the directory where the file is located
     :param dstdir: Directory where to put the extracted YANG models
     :param strict: Strict syntax enforcement
+    :param strict_examples: Only output valid examples when in strict mode
     :param debug_level: Determines how much debug output is printed to the console
     :return: None
     """
