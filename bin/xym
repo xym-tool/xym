@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-
 import argparse
 from xym import xym
 
@@ -35,7 +34,7 @@ def run():
 
 	args = parser.parse_args()
 
-	extracted_models = xym(args.source,
+	extracted_models = xym.xym(args.source,
                            args.srcdir,
                            args.dstdir,
                            args.strict,
@@ -53,3 +52,4 @@ def run():
 
 if __name__ == '__main__':
 	run()
+
