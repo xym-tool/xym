@@ -16,7 +16,7 @@ __author__ = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com, einarnn@gm
 __copyright__ = "Copyright(c) 2015, Cisco Systems, Inc."
 __license__ = "New-style BSD"
 __email__ = "jmedved@cisco.com"
-__version__ = "0.3"
+__version__ = "0.3.1"
 
 if sys.version_info < (2, 7, 9):
     disable_warnings()
@@ -49,7 +49,7 @@ class YangModuleExtractor:
     CODE_BEGINS_TAG = re.compile('^[ \t]*<CODE BEGINS>( *file( +"(.*)")?)?.*$')
     EXAMPLE_TAG = re.compile('^(example-)')
 
-    def __init__(self, src_id, dst_dir, strict, strict_examples, debug_level):
+    def __init__(self, src_id, dst_dir, strict=True, debug_level=0, strict_examples=True):
         """
         Initializes class-global variables.
         :param src_id: text string containing the draft or RFC text from which YANG
