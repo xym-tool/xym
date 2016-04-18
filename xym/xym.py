@@ -342,6 +342,6 @@ if __name__ == "__main__":
         else:
             print("Created the following models::")
         for em in extracted_models:
-            print('   %s' % em)
+            print('%s : %s ' % em, args.source)
     else:
         print('No models created.')
