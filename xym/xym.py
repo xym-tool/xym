@@ -149,21 +149,33 @@ class YangModuleExtractor:
         example_match = False
         i = 0
         level = 0
+        quotes = 0;
         while i < len(content):
             line = content[i]
+
             # Try to match '<CODE ENDS>'
             if self.CODE_ENDS_TAG.match(line):
                 if in_model is False:
                     self.warning("Line %d: misplaced <CODE ENDS>" % i)
                 in_model = False
 
+            if "\"" in line:
+                if line.count("\"") % 2 == 0:
+                    quotes = 0
+                else:
+                    if quotes == 1:
+                        quotes = 0
+                    else:
+                        quotes = 1
+
             # Try to match '(sub)module <module_name> {'
             match = self.MODULE_STATEMENT.match(line)
             if match:
                 # We're already parsing a module
-                if level > 0:
-                    self.error("Line %d - 'module' statement within another module" % i)
-                    return
+                if quotes == 0:
+                    if level > 0:
+                        self.error("Line %d - 'module' statement within another module" % i)
+                        return
 
                 # Check if we should enforce <CODE BEGINS> / <CODE ENDS>
                 # if we do enforce, we ignore models  not enclosed in <CODE BEGINS> / <CODE ENDS>
@@ -191,9 +203,9 @@ class YangModuleExtractor:
 
                 # always set the level to 1; we decide whether or not
                 # to output at the end
-                level = 1
-                
-                if not output_file and level == 1:
+                if quotes == 0:
+                    level = 1
+                if not output_file and level == 1 and quotes == 0:
                     output_file = '%s.yang' % match.groups()[2].strip('"\'')
                     if self.debug_level > 0:
                         print('   Getting YANG file name from module name: %s' % output_file)
@@ -222,7 +234,12 @@ class YangModuleExtractor:
                         print(':'.join(x.encode('hex') for x in line))
                     model.append(line)
                     counter = Counter(line)
-                    level += (counter['{'] - counter['}'])
+                    if quotes == 0:
+                        if "\"" in line and "}" in line:
+                            if line.index("}") > line.index("\""):
+                                level += (counter['{'] - counter['}'])
+                        else:
+                            level += (counter['{'] - counter['}'])
                     if level == 1:
                         if self.strict:
                             if self.strict_examples:
