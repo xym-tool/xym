@@ -10,10 +10,10 @@ import requests
 from requests.packages.urllib3 import disable_warnings
 
 __author__ = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com, einarnn@gmail.com'
-__copyright__ = "Copyright(c) 2015, 2016 Cisco Systems, Inc."
+__copyright__ = "Copyright(c) 2015, 2016, 2017 Cisco Systems, Inc."
 __license__ = "New-style BSD"
 __email__ = "jmedved@cisco.com"
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 
 if sys.version_info < (2, 7, 9):
     disable_warnings()
