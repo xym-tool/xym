@@ -126,6 +126,10 @@ class YangModuleExtractor:
                         self.change_model_name(model, real_model_name_revision + '.yang')
                 else:
                     self.change_model_name(model, real_model_name_revision + '.yang')
+                else:
+                    print(3)
+                    self.change_model_name(model, real_model_name_revision + '.yang')
+                    print(4)
         return self.extracted_models
 
     def change_model_name(self, old_model_name, new_model_name):
