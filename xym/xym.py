@@ -1,11 +1,15 @@
 #!/usr/bin/env python
 from __future__ import print_function  # Must be at the beginning of the file
+
 import argparse
-from collections import Counter
-import os.path
 import os
-import sys
+import os.path
 import re
+import shlex
+import sys
+from collections import Counter
+from subprocess import Popen, PIPE
+
 import requests
 from requests.packages.urllib3 import disable_warnings
 
@@ -100,8 +104,38 @@ class YangModuleExtractor:
         """
         print("   ERROR: '%s', %s" % (self.src_id, s), file=sys.stderr)
 
-    def get_extracted_models(self):
+    def get_extracted_models(self, force_revision):
+        if force_revision is True:
+            models = []
+            models.extend(self.extracted_models)
+            for model in models:
+                print(1)
+                command = "/usr/local/bin/pyang -f name-revision " + self.dst_dir + '/' + model
+                proc = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
+                out, err = proc.communicate()
+                print(2)
+                if err:
+                    print("ERROR extracting revision from file with: pyang -f name-revision " + self.dst_dir + '/'
+                          + model)
+                    print("  Error: " + err)
+                    print()
+
+                real_model_name_revision = out.rstrip()
+                real_model_revision = real_model_name_revision.split('@')[1]
+                if '@' in model:
+                    existing_model_revision = model.split('@')[1].split('.')[0]
+                    if real_model_revision not in existing_model_revision:
+                        self.change_model_name(model, real_model_name_revision + '.yang')
+                else:
+                    print(3)
+                    self.change_model_name(model, real_model_name_revision + '.yang')
+                    print(4)
         return self.extracted_models
+
+    def change_model_name(self, old_model_name, new_model_name):
+        self.extracted_models.remove(old_model_name)
+        self.extracted_models.append(new_model_name)
+        os.rename(self.dst_dir + '/' + old_model_name, self.dst_dir + '/' + new_model_name)
 
     def remove_leading_spaces(self, input_model):
         """
@@ -419,7 +453,8 @@ class YangModuleExtractor:
             self.error("Line %d - Missing <CODE ENDS>" % i)
 
 
-def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_level=0, add_line_refs=False):
+def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_level=0, add_line_refs=False,
+        force_revision=False):
     """
     Extracts YANG model from an IETF RFC or draft text file.
     This is the main (external) API entry for the module.
@@ -432,6 +467,7 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_le
     :param strict: Strict syntax enforcement
     :param strict_examples: Only output valid examples when in strict mode
     :param debug_level: Determines how much debug output is printed to the console
+    :param force_revision: Whether it should create a <filename>@<revision>.yang even on error
     :return: None
     """
     url = re.compile(r'^(?:http|ftp)s?://'  # http:// or https://
@@ -457,7 +493,7 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_le
                 ye.extract_yang_model(sf.readlines())
         except IOError as ioe:
             print(ioe)
-    return ye.get_extracted_models()
+    return ye.get_extracted_models(force_revision)
 
 
 if __name__ == "__main__":
@@ -493,6 +529,9 @@ if __name__ == "__main__":
                              "the reference to the line number in the "
                              "original RFC/Draft text file from which the "
                              "line was extracted.")
+    parser.add_argument("--force-revision", type=bool, default=False,
+                        help="Optional: if True it will check if file contains correct revision in file name."
+                             "If it doesnt it will automatically add the correct revision to the filename")
     args = parser.parse_args()
 
     extracted_models = xym(args.source,
@@ -501,7 +540,8 @@ if __name__ == "__main__":
                            args.strict,
                            args.strict_examples,
                            args.debug,
-                           args.add_line_refs)
+                           args.add_line_refs,
+                           args.force_revision)
     if len(extracted_models) > 0:
         if args.strict:
             print("\nCreated the following models that conform to the strict guidelines::")
