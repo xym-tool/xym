@@ -17,7 +17,7 @@ __author__ = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com, einarnn@gm
 __copyright__ = "Copyright(c) 2015, 2016, 2017 Cisco Systems, Inc."
 __license__ = "New-style BSD"
 __email__ = "jmedved@cisco.com"
-__version__ = "0.3.2"
+__version__ = "0.4"
 
 if sys.version_info < (2, 7, 9):
     disable_warnings()
@@ -141,7 +141,7 @@ class YangModuleExtractor:
         to each line. The function also determines the length of the longest
         line in the module - this value can be used by later stages of the
         model post-processing pipeline.
-        :param input_model: The yang model to be processed
+        :param input_model: The YANG model to be processed
         :return: YANG model lines with leading spaces removed
         """
         leading_spaces = 1024
@@ -164,8 +164,8 @@ class YangModuleExtractor:
         This function is a part of the model post-processing pipeline. For
         each line in the module, it adds a reference to the line number in
         the original draft/RFC from where the module line was extracted.
-        :param input_model: The yang model to be processed
-        :return: Modified yang model, where line numbers from the RFC/Draft
+        :param input_model: The YANG model to be processed
+        :return: Modified YANG model, where line numbers from the RFC/Draft
                  text file are added as comments at the end of each line in
                  the modified model
         """
@@ -183,7 +183,7 @@ class YangModuleExtractor:
         from a draft or RFC text. Newlines are removed whenever 2 or more
         consecutive empty lines are found in the model. This function is a
         part of the model post-processing pipeline.
-        :param input_model: The yang model to be processed
+        :param input_model: The YANG model to be processed
         :return: YANG model with superfluous newlines removed
         """
         ncnt = 0
@@ -206,10 +206,10 @@ class YangModuleExtractor:
         """
         This function defines the order and execution logic for actions
         that are performed in the model post-processing pipeline.
-        :param input_model: The yang model to be processed in the pipeline
+        :param input_model: The YANG model to be processed in the pipeline
         :param add_line_refs: Flag that controls whether line number
             references should be added to the model.
-        :return: List of strings that constitute the final yang model to
+        :return: List of strings that constitute the final YANG model to
             be written to its module file.
         """
         intermediate_model = self.remove_leading_spaces(input_model)
@@ -350,11 +350,11 @@ class YangModuleExtractor:
                 example_match = self.EXAMPLE_TAG.match(match.groups()[2])
                 if in_model is True:
                     if example_match:
-                        self.error("Line %d - Yang module '%s' with <CODE BEGINS> and starting with 'example-'" %
+                        self.error("Line %d - YANG module '%s' with <CODE BEGINS> and starting with 'example-'" %
                                    (i, match.groups()[2]))
                 else:
                     if not example_match:
-                        self.error("Line %d - Yang module '%s' with no <CODE BEGINS> and not starting with 'example-'" %
+                        self.error("Line %d - YANG module '%s' with no <CODE BEGINS> and not starting with 'example-'" %
                                    (i, match.groups()[2]))
 
                 # now decide if we're allowed to set the level
@@ -440,7 +440,7 @@ class YangModuleExtractor:
                     if mg[0] and mg[1] is None:
                         self.error('Line %d - Missing file name in <CODE BEGINS>' % i)
                     else:
-                        self.error("Line %d - Yang file not specified in <CODE BEGINS>" % i)
+                        self.error("Line %d - YANG file not specified in <CODE BEGINS>" % i)
             i += 1
         if level > 0:
             self.error("<End of File> - EOF encountered while parsing the model")
@@ -496,7 +496,7 @@ if __name__ == "__main__":
     """
     Command line utility / test
     """
-    parser = argparse.ArgumentParser(description="Extracts one or more yang "
+    parser = argparse.ArgumentParser(description="Extracts one or more YANG "
                                      "models from an IETF RFC/draft text file")
     parser.add_argument("source",
                         help="The URL or file name of the RFC/draft text from "
@@ -506,7 +506,7 @@ if __name__ == "__main__":
                              "text; default is './'")
     parser.add_argument("--dstdir", default='.',
                         help="Optional: directory where to put the extracted "
-                             "yang module(s); default is './'")
+                             "YANG module(s); default is './'")
     parser.add_argument("--strict", action='store_true', default=False,
                         help="Optional flag that determines syntax enforcement; "
                              "If set to 'True', the <CODE BEGINS> / <CODE ENDS> "
@@ -521,7 +521,7 @@ if __name__ == "__main__":
                              "hexdumps every parsed line. ")
     parser.add_argument("--add-line-refs", action='store_true', default=False,
                         help="Optional: if present, comments are added to each "
-                             "line in the extracted yang module that contain "
+                             "line in the extracted YANG module that contain "
                              "the reference to the line number in the "
                              "original RFC/Draft text file from which the "
                              "line was extracted.")
