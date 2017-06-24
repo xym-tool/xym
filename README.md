@@ -32,9 +32,10 @@ Help with it's options may be displayed thus:
 
 ```
 $ xym --help
-usage: xym.py [-h] [--srcdir SRCDIR] [--dstdir DSTDIR] [--strict]
-               [--strict-examples] [--debug DEBUG]
-               source
+usage: xym [-h] [--srcdir SRCDIR] [--dstdir DSTDIR] [--strict STRICT]
+           [--strict-examples] [--write-dict] [--debug DEBUG]
+           [--force-revision FORCE_REVISION] [--version]
+           source
 
 Extracts one or more yang models from an IETF RFC/draft text file
 
@@ -52,6 +53,9 @@ optional arguments:
                      to 'True', the <CODE BEGINS> / <CODE ENDS> tags are
                      required; default is 'False'
   --strict-examples  Only output valid examples when in strict mode
+  --force-revision   Optional: if True it will check if file contains 
+                     correct revision in file name. If it doesnt it will
+                     automatically add the correct revision to the filename
   --debug DEBUG      Optional: debug level - determines the amount of debug
                      info printed to console; default is 0 (no debug info
                      printed)

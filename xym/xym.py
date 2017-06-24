@@ -525,7 +525,7 @@ if __name__ == "__main__":
                              "the reference to the line number in the "
                              "original RFC/Draft text file from which the "
                              "line was extracted.")
-    parser.add_argument("--force-revision", type=bool, default=False,
+    parser.add_argument("--force-revision", action='store_true', default=False,
                         help="Optional: if True it will check if file contains correct revision in file name."
                              "If it doesnt it will automatically add the correct revision to the filename")
     args = parser.parse_args()
