@@ -113,18 +113,25 @@ class YangModuleExtractor:
                 proc = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate()
                 if err:
-                    print("ERROR extracting revision from file with: pyang -f name-revision " + self.dst_dir + '/'
-                          + model)
-                    print("  Error: " + err)
-                    print()
+                    self.error('extracting revision from file with: pyang -f name-revision ' + self.dst_dir +
+                               '/' + model + ' failed with error:\n' + err)
 
                 real_model_name_revision = out.rstrip()
                 real_model_revision = real_model_name_revision.split('@')[1]
+                real_model_name = real_model_name_revision.split('@')[0]
                 if '@' in model:
-                    existing_model_revision = model.split('@')[1].split('.')[0]
+                    existing_model = model.split('@')
+                    existing_model_revision = existing_model[1].split('.')[0]
+                    existing_model_name = existing_model[0]
                     if real_model_revision not in existing_model_revision:
+                        self.error(existing_model_name + ' model revision ' + existing_model_revision
+                                   + ' is wrong or has incorrect format')
+                        self.change_model_name(model, real_model_name_revision + '.yang')
+                    if real_model_name not in existing_model_name:
+                        self.error(existing_model_name + ' name of the model is wrong: ' + existing_model_name)
                         self.change_model_name(model, real_model_name_revision + '.yang')
                 else:
+                    self.error(real_model_name + ' model revision is missing')
                     self.change_model_name(model, real_model_name_revision + '.yang')
         return self.extracted_models
 
