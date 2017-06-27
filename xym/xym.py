@@ -109,12 +109,13 @@ class YangModuleExtractor:
             models = []
             models.extend(self.extracted_models)
             for model in models:
-                command = "/usr/local/bin/pyang -f name-revision " + self.dst_dir + '/' + model
+                command = '/usr/local/bin/pyang -f name-revision "' + self.dst_dir + '/' + model + '"'
                 proc = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate()
                 if err:
-                    self.error('extracting revision from file with: pyang -f name-revision ' + self.dst_dir +
-                               '/' + model + ' failed with error:\n' + err)
+                    if self.debug_level > 2:
+                        self.error('extracting revision from file with: pyang -f name-revision ' + self.dst_dir +
+                                   '/' + model + ' has following errors:\n' + err)
 
                 real_model_name_revision = out.rstrip()
                 real_model_revision = real_model_name_revision.split('@')[1]
@@ -123,11 +124,11 @@ class YangModuleExtractor:
                     existing_model = model.split('@')
                     existing_model_revision = existing_model[1].split('.')[0]
                     existing_model_name = existing_model[0]
-                    if real_model_revision not in existing_model_revision:
+                    if real_model_revision != existing_model_revision:
                         self.error(existing_model_name + ' model revision ' + existing_model_revision
                                    + ' is wrong or has incorrect format')
                         self.change_model_name(model, real_model_name_revision + '.yang')
-                    if real_model_name not in existing_model_name:
+                    elif real_model_name != existing_model_name:
                         self.error(existing_model_name + ' name of the model is wrong: ' + existing_model_name)
                         self.change_model_name(model, real_model_name_revision + '.yang')
                 else:
