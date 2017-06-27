@@ -104,25 +104,65 @@ class YangModuleExtractor:
         """
         print("   ERROR: '%s', %s" % (self.src_id, s), file=sys.stderr)
 
-    def get_extracted_models(self, force_revision):
-        if force_revision is True:
+    def get_mod_rev(self, module):
+        mname = ''
+        mrev = ''
+        bt = ''
+
+        with open(module, 'r') as ym:
+            for line in ym:
+                if mname != '' and mrev != '' and bt != '':
+                    return mname + '@' + mrev + ' (belongs-to {})'.format(bt)
+
+                if mname == '':
+                    m = re.search(r'^\s*(sub)?module\s+([\w\-\d]+)', line)
+                    if m:
+                        mname = m.group(2)
+                        continue
+
+                if mrev == '':
+                    m = re.search(r'^\s*revision\s+"?([\d\-]+)"?', line)
+                    if m:
+                        mrev = m.group(1)
+                        continue
+
+                if bt == '':
+                    m = re.search(r'^\s*belongs-to\s+([\w\-\d]+)', line)
+                    if m:
+                        bt = m.group(1)
+                        continue
+
+        if bt != '':
+            return mname + '@' + mrev + ' (belongs-to {})'.format(bt)
+
+        return mname + '@' + mrev
+
+    def get_extracted_models(self, force_revision_pyang, force_revision_regexp):
+        if force_revision_pyang or force_revision_regexp:
             models = []
             models.extend(self.extracted_models)
             for model in models:
-                command = '/usr/local/bin/pyang -f name-revision "' + self.dst_dir + '/' + model + '"'
-                proc = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
-                out, err = proc.communicate()
-                if out.rstrip() == '':
-                    if err:
-                        self.error('extracting revision from file with: pyang -f name-revision ' + self.dst_dir +
-                                       '/' + model + ' has following errors:\n' + err)
+                if force_revision_pyang:
+                    command = '/usr/local/bin/pyang -f name-revision "' + self.dst_dir + '/' + model + '"'
+                    proc = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
+                    out, err = proc.communicate()
+                    if out.rstrip() == '':
+                        if err:
+                            self.error('extracting revision from file with: pyang -f name-revision ' + self.dst_dir +
+                                           '/' + model + ' has following errors:\n' + err)
+                else:
+                    out = self.get_mod_rev(model)
 
                 real_model_name_revision = out.rstrip()
                 if real_model_name_revision != '':
                     real_model_revision = real_model_name_revision.split('@')[1][0:10]
                     real_model_name = real_model_name_revision.split('@')[0]
                     real_model_name_revision = real_model_name + '@' + real_model_revision
-                    if real_model_revision == "NA":
+                    if force_revision_regexp:
+                        missing_revision_symbol = ''
+                    else:
+                        missing_revision_symbol = '@'
+                    if real_model_revision == missing_revision_symbol:
                         self.error('yang module ' + model.split('@')[0] + ' does not contain revision')
                         if real_model_name != model.split('@')[0].split('.')[0]:
                             self.error(model.split('@')[0] + ' model name is wrong')
@@ -481,10 +521,11 @@ class YangModuleExtractor:
 
 
 def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_level=0, add_line_refs=False,
-        force_revision=False):
+        force_revision_pyang=False, force_revision_regexp=False):
     """
     Extracts YANG model from an IETF RFC or draft text file.
     This is the main (external) API entry for the module.
+
     :param add_line_refs:
     :param source_id: identifier (file name or URL) of a draft or RFC file containing
            one or more YANG models
@@ -494,9 +535,15 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_le
     :param strict: Strict syntax enforcement
     :param strict_examples: Only output valid examples when in strict mode
     :param debug_level: Determines how much debug output is printed to the console
-    :param force_revision: Whether it should create a <filename>@<revision>.yang even on error
+    :param force_revision_regexp: Whether it should create a <filename>@<revision>.yang even on error using regexp
+    :param force_revision_pyang: Whether it should create a <filename>@<revision>.yang even on error using pyang
     :return: None
     """
+
+    if force_revision_regexp and force_revision_pyang:
+        print('Can not use both methods for parsing name and revision - using regular expression method only')
+        force_revision_pyang = False
+
     url = re.compile(r'^(?:http|ftp)s?://'  # http:// or https://
                      r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain
                      r'localhost|'  # localhost...
@@ -520,7 +567,7 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_le
                 ye.extract_yang_model(sf.readlines())
         except IOError as ioe:
             print(ioe)
-    return ye.get_extracted_models(force_revision)
+    return ye.get_extracted_models(force_revision_pyang, force_revision_regexp)
 
 
 if __name__ == "__main__":
@@ -556,9 +603,13 @@ if __name__ == "__main__":
                              "the reference to the line number in the "
                              "original RFC/Draft text file from which the "
                              "line was extracted.")
-    parser.add_argument("--force-revision", action='store_true', default=False,
+    parser.add_argument("--force-revision-pyang", action='store_true', default=False,
                         help="Optional: if True it will check if file contains correct revision in file name."
-                             "If it doesnt it will automatically add the correct revision to the filename")
+                             "If it doesnt it will automatically add the correct revision to the filename using pyang")
+    parser.add_argument("--force-revision-regexp", action='store_true', default=False,
+                        help="Optional: if True it will check if file contains correct revision in file name."
+                             "If it doesnt it will automatically add the correct revision to the filename using regular"
+                             " expression")
     args = parser.parse_args()
 
     extracted_models = xym(args.source,
@@ -568,7 +619,8 @@ if __name__ == "__main__":
                            args.strict_examples,
                            args.debug,
                            args.add_line_refs,
-                           args.force_revision)
+                           args.force_revision_pyang,
+                           args.force_revision_regexp)
     if len(extracted_models) > 0:
         if args.strict:
             print("\nCreated the following models that conform to the strict guidelines::")
