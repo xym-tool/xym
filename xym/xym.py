@@ -129,7 +129,7 @@ class YangModuleExtractor:
                         switch_items = False
                         # check for suffix .yang
                         if '.yang' not in model:
-                            self.error(existing_model + 'is missing .yang suffix')
+                            self.error(existing_model + ' is missing .yang suffix')
                             switch_items = True
 
                         # check for model revision if correct
