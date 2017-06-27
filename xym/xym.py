@@ -109,8 +109,7 @@ class YangModuleExtractor:
             models = []
             models.extend(self.extracted_models)
             for model in models:
-                command = '/usr/local/bin/pyang --plugindir /home/miroslav/PycharmProjects/yang-search/pyang-plugins -f name-revision "'\
-                          + self.dst_dir + '/' + model + '"'
+                command = '/usr/local/bin/pyang -f name-revision "' + self.dst_dir + '/' + model + '"'
                 proc = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
                 out, err = proc.communicate()
                 if out.rstrip() == '':
