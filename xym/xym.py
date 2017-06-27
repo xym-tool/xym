@@ -119,18 +119,32 @@ class YangModuleExtractor:
 
                 real_model_name_revision = out.rstrip()
                 if real_model_name_revision != '':
-                    real_model_revision = real_model_name_revision.split('@')[1]
+                    real_model_revision = real_model_name_revision.split('@')[1][0:10]
                     real_model_name = real_model_name_revision.split('@')[0]
                     if '@' in model:
                         existing_model = model.split('@')
                         existing_model_revision = existing_model[1].split('.')[0]
                         existing_model_name = existing_model[0]
+
+                        switch_items = False
+                        # check for suffix .yang
+                        if '.yang' not in model:
+                            self.error(existing_model + ' is missing .yang suffix')
+                            switch_items = True
+
+                        # check for model revision if correct
                         if real_model_revision != existing_model_revision:
                             self.error(existing_model_name + ' model revision ' + existing_model_revision
                                        + ' is wrong or has incorrect format')
-                            self.change_model_name(model, real_model_name_revision + '.yang')
-                        elif real_model_name != existing_model_name:
+                            switch_items = True
+
+                        # check for model name if correct
+                        if real_model_name != existing_model_name:
                             self.error(existing_model_name + ' name of the model is wrong: ' + existing_model_name)
+                            switch_items = True
+
+                        # if any of above are not correct change file
+                        if switch_items:
                             self.change_model_name(model, real_model_name_revision + '.yang')
                     else:
                         self.error(real_model_name + ' model revision is missing')
