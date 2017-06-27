@@ -125,12 +125,22 @@ class YangModuleExtractor:
                         existing_model = model.split('@')
                         existing_model_revision = existing_model[1].split('.')[0]
                         existing_model_name = existing_model[0]
+
+                        switch_items = False
+                        if '.yang' not in model:
+                            self.error(existing_model + 'is missing .yang suffix')
+                            switch_items = True
+
                         if real_model_revision != existing_model_revision:
                             self.error(existing_model_name + ' model revision ' + existing_model_revision
                                        + ' is wrong or has incorrect format')
-                            self.change_model_name(model, real_model_name_revision + '.yang')
-                        elif real_model_name != existing_model_name:
+                            switch_items = True
+
+                        if real_model_name != existing_model_name:
                             self.error(existing_model_name + ' name of the model is wrong: ' + existing_model_name)
+                            switch_items = True
+
+                        if switch_items:
                             self.change_model_name(model, real_model_name_revision + '.yang')
                     else:
                         self.error(real_model_name + ' model revision is missing')
