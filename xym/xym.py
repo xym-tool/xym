@@ -128,7 +128,7 @@ class YangModuleExtractor:
 
                         switch_items = False
                         if '.yang' not in model:
-                            self.error(existing_model + 'is missing .yang suffix')
+                            self.error(existing_model + ' is missing .yang suffix')
                             switch_items = True
 
                         if real_model_revision != existing_model_revision:
