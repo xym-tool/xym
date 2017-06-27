@@ -30,9 +30,13 @@ def run():
 		default=0,
 		help="Optional: debug level - determines the amount of debug "
 		"info printed to console; default is 0 (no debug info printed)")
-	parser.add_argument("--force-revision", action='store_true', default=False,
+	parser.add_argument("--force-revision-pyang", action='store_true', default=False,
 						help="Optional: if True it will check if file contains correct revision in file name."
-							 "If it doesnt it will automatically add the correct revision to the filename")
+							 "If it doesnt it will automatically add the correct revision to the filename using pyang")
+	parser.add_argument("--force-revision-regexp", action='store_true', default=False,
+						help="Optional: if True it will check if file contains correct revision in file name."
+							 "If it doesnt it will automatically add the correct revision to the filename using regular"
+							 " expression")
 	parser.add_argument("--version",
 		action='version',
 		version='%(prog)s {version}'.format(version=xym.__version__))
@@ -45,7 +49,8 @@ def run():
                            args.strict,
                            args.strict_examples,
                            args.debug,
-                           force_revision=args.force_revision)
+                           force_revision_pyang=args.force_revision_pyang,
+						   force_revision_regexp=args.force_revision_regexp)
 	if len(extracted_models) > 0:
 		if args.strict:
 			print("Created the following models that conform to the strict guidelines:")
