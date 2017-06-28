@@ -151,7 +151,7 @@ class YangModuleExtractor:
                             self.error('extracting revision from file with: pyang -f name-revision ' + self.dst_dir +
                                            '/' + model + ' has following errors:\n' + err)
                 else:
-                    out = self.get_mod_rev(model)
+                    out = self.get_mod_rev(self.dst_dir + '/' + model)
 
                 real_model_name_revision = out.rstrip()
                 if real_model_name_revision != '':
