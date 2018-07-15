@@ -143,12 +143,12 @@ class YangModuleExtractor:
             models.extend(self.extracted_models)
             for model in models:
                 if force_revision_pyang:
-                    command = '/usr/local/bin/pyang -f name-revision "' + self.dst_dir + '/' + model + '"'
+                    command = '/usr/local/bin/pyang -f name --name-print-revision "' + self.dst_dir + '/' + model + '"'
                     proc = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
                     out, err = proc.communicate()
                     if out.rstrip() == '':
                         if err:
-                            self.error('extracting revision from file with: pyang -f name-revision ' + self.dst_dir +
+                            self.error('extracting revision from file with: pyang -f name --name-print-revision ' + self.dst_dir +
                                            '/' + model + ' has following errors:\n' + err)
                 else:
                     out = self.get_mod_rev(self.dst_dir + '/' + model)
