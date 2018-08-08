@@ -474,7 +474,7 @@ class YangModuleExtractor:
                     counter = Counter(line)
                     if quotes == 0:
                         if "\"" in line and "}" in line:
-                            if line.index("}") > line.index("\""):
+                            if line.index("}") > line.rindex("\"") or line.index("}") < line.index("\""):
                                 level += (counter['{'] - counter['}'])
                         else:
                             level += (counter['{'] - counter['}'])
