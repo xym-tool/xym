@@ -561,14 +561,21 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_le
     if is_url:
         r = requests.get(source_id, headers=rqst_hdrs)
         if r.status_code == 200:
-            content = r.text.encode('utf8').splitlines(True)
+            if sys.version_info >= (3, 4):
+                content = r.text.splitlines(True)
+            else:
+                content = r.text.encode('utf8').splitlines(True)
             ye.extract_yang_model(content)
         else:
             print("Failed to fetch file from URL '%s', error '%d'" % (source_id, r.status_code), file=sys.stderr)
     else:
         try:
-            with open(os.path.join(srcdir, source_id)) as sf:
-                ye.extract_yang_model(sf.readlines())
+            if sys.version_info >= (3, 4):
+                with open(os.path.join(srcdir, source_id), encoding='latin-1', errors='ignore') as sf:
+                    ye.extract_yang_model(sf.readlines())
+            else:
+                with open(os.path.join(srcdir, source_id)) as sf:
+                    ye.extract_yang_model(sf.readlines())
         except IOError as ioe:
             print(ioe)
     return ye.get_extracted_models(force_revision_pyang, force_revision_regexp)
