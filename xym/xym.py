@@ -499,6 +499,10 @@ class YangModuleExtractor:
             # Try to match '<CODE BEGINS>'
             match = self.CODE_BEGINS_TAG.match(line)
             if match:
+                while not line[:-1].endswith('"'):
+                    line = line[:-1] + content[i+1].strip(' ')
+                    i += 1
+                    match = self.CODE_BEGINS_TAG.match(line)
                 # Found the beginning of the YANG module code section; make sure we're not parsing a model already
                 if level > 0:
                     self.error("Line %d - <CODE BEGINS> within a model" % i)
