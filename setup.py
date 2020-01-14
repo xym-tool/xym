@@ -1,6 +1,5 @@
 import os
 from setuptools import setup
-from xym import xym
 
 def read(fname):
 	return open(os.path.join(os.path.dirname(__file__), fname)).read()
@@ -11,7 +10,7 @@ install_reqs = list(filter(None, req_lines))
 
 setup(
   name = 'xym',
-  version = xym.__version__,
+  version = '0.4.7',
   description = ('A tool to fetch and extract YANG modules from IETF RFCs and Drafts'),
   long_description = """xym is a simple tool for fetching and extracting YANG modules from IETF RFCs and drafts as local files and from URLs.""",
   packages = ['xym'],
