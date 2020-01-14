@@ -5,6 +5,10 @@ from xym import xym
 def read(fname):
 	return open(os.path.join(os.path.dirname(__file__), fname)).read()
 
+#parse requirements
+req_lines = [line.strip() for line in open("requirements.txt").readlines()]
+install_reqs = list(filter(None, req_lines))
+
 setup(
   name = 'xym',
   version = xym.__version__,
@@ -16,7 +20,7 @@ setup(
   author_email = 'jmedved@cisco.com',
   license = 'New-style BSD',
   url = 'https://github.com/xym-tool/xym',
-  install_requires = ['requests>=2.6'],
+  install_requires = install_reqs,
   include_package_data = True,
   keywords = ['yang', 'extraction'],
   classifiers = [],
