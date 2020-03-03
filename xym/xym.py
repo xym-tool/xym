@@ -68,7 +68,7 @@ class YangModuleExtractor:
     MODULE_STATEMENT = re.compile('''^[ \t]*(sub)?module +(["'])?([-A-Za-z0-9]*(@[0-9-]*)?)(["'])? *\{.*$''')
     PAGE_TAG = re.compile('.*\[Page [0-9]*\].*')
     CODE_ENDS_TAG = re.compile('^[ \t]*<CODE ENDS>.*$')
-    CODE_BEGINS_TAG = re.compile('^[ \t]*<CODE BEGINS>( *file( +"(.*)")?)?.*$')
+    CODE_BEGINS_TAG = re.compile('^[ \t]*<CODE BEGINS>( *file( +"(.*)")?)?[ \t]*$')
     EXAMPLE_TAG = re.compile('^(example-)')
 
     def __init__(self, src_id, dst_dir, strict=True, strict_examples=True, add_line_refs=False, debug_level=0):
@@ -385,6 +385,7 @@ class YangModuleExtractor:
         model = []
         output_file = None
         in_model = False
+        in_code = False
         example_match = False
         i = 0
         level = 0
@@ -394,9 +395,10 @@ class YangModuleExtractor:
 
             # Try to match '<CODE ENDS>'
             if self.CODE_ENDS_TAG.match(line):
-                if in_model is False:
+                if in_model is False and in_code is False:
                     self.warning("Line %d: misplaced <CODE ENDS>" % i)
                 in_model = False
+                in_code = False
 
             if "\"" in line:
                 if line.count("\"") % 2 == 0:
@@ -499,10 +501,21 @@ class YangModuleExtractor:
             # Try to match '<CODE BEGINS>'
             match = self.CODE_BEGINS_TAG.match(line)
             if match:
-                while not line[:-1].endswith('"'):
-                    line = line[:-1] + content[i+1].strip(' ')
-                    i += 1
+                in_code = True
+                j = i
+                # If we matched 'CODE BEGINS', but not the file name, look on
+                # following lines for a complete match
+                while match and not line.rstrip(' \t\r\n').endswith('"'):
+                    j += 1
+                    if j >= len(content):
+                        break
+                    line = line.rstrip(' \t\r\n') + content[j].strip(' ')
                     match = self.CODE_BEGINS_TAG.match(line)
+                # if we ended up with an actual match, update our line
+                # counter; otherwise forget the scan for the file name
+                if match:
+                    i = j
+            if match:
                 # Found the beginning of the YANG module code section; make sure we're not parsing a model already
                 if level > 0:
                     self.error("Line %d - <CODE BEGINS> within a model" % i)
