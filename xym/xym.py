@@ -499,7 +499,11 @@ class YangModuleExtractor:
             # Try to match '<CODE BEGINS>'
             match = self.CODE_BEGINS_TAG.match(line)
             if match:
+                i_temp = i
                 while not line[:-1].endswith('"'):
+                    if (len(content)) == i+1:
+                        i = i_temp
+                        break
                     line = line[:-1] + content[i+1].strip(' ')
                     i += 1
                     match = self.CODE_BEGINS_TAG.match(line)
