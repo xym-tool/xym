@@ -17,7 +17,7 @@ __author__ = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com, einarnn@gm
 __copyright__ = "Copyright(c) 2015, 2016, 2017 Cisco Systems, Inc."
 __license__ = "New-style BSD"
 __email__ = "jmedved@cisco.com"
-__version__ = "0.4.7"
+__version__ = "0.4.8"
 
 if sys.version_info < (2, 7, 9):
     disable_warnings()
