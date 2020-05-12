@@ -68,7 +68,7 @@ class YangModuleExtractor:
     MODULE_STATEMENT = re.compile('''^[ \t]*(sub)?module +(["'])?([-A-Za-z0-9]*(@[0-9-]*)?)(["'])? *\{.*$''')
     PAGE_TAG = re.compile('.*\[Page [0-9]*\].*')
     CODE_ENDS_TAG = re.compile('^[ \t]*<CODE ENDS>.*$')
-    CODE_BEGINS_TAG = re.compile('^[ \t]*<CODE BEGINS>( *file( +"(.*)")?)?[ \t]*$')
+    CODE_BEGINS_TAG = re.compile('^[ \t]*<CODE BEGINS>( *file(\W+"(.*)")?)?[ \t]*$')
     EXAMPLE_TAG = re.compile('^(example-)')
 
     def __init__(self, src_id, dst_dir, strict=True, strict_examples=True, add_line_refs=False, debug_level=0):
@@ -506,6 +506,8 @@ class YangModuleExtractor:
                 # If we matched 'CODE BEGINS', but not the file name, look on
                 # following lines for a complete match
                 while match and not line.rstrip(' \t\r\n').endswith('"'):
+                    if self.MODULE_STATEMENT.match(content[j + 1]):
+                        break
                     j += 1
                     if j >= len(content):
                         break
