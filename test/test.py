@@ -24,7 +24,7 @@ class TestCase_default(TestCase_base):
 
         xym.py test-file.txt
         """
-        extracted_modules = xym.xym('test-file.txt', './', './', False, False, 0)
+        extracted_modules = xym.xym('resources/test-file.txt', './', './', False, False, 0)
         self.assertTrue(len(extracted_modules)==5)
         module_check = ['example-no-error.yang', 'ex-error.yang', 'ex-no-error.yang', 'example-error.yang', 'test-valid.yang']
         for y in module_check:
@@ -37,11 +37,12 @@ class TestCase_strict(TestCase_base):
 
         xym.py --strict test-file.txt
         """
-        extracted_modules = xym.xym('test-file.txt', './', './', True, False, 0)
+        extracted_modules = xym.xym('resources/test-file.txt', './', './', True, False, 0)
         self.assertTrue(len(extracted_modules)==3)
         module_check = ['ex-no-error.yang', 'example-error.yang', 'test-valid.yang']
         for y in module_check:
             self.assertTrue(y in extracted_modules)
+
 
 class TestCase_strict_examples(TestCase_base):
     def runTest(self):
@@ -49,9 +50,36 @@ class TestCase_strict_examples(TestCase_base):
 
         xym.py --strict --strict-examples test-file.txt
         """
-        extracted_modules = xym.xym('test-file.txt', './', './', True, True, 0)
+        extracted_modules = xym.xym('resources/test-file.txt', './', './', True, True, 0)
         self.assertTrue(len(extracted_modules)==1)
         module_check = ['example-no-error.yang']
         for y in module_check:
             self.assertTrue(y in extracted_modules)
 
+
+class TestCase_codeBegins_noFile(TestCase_base):
+    def runTest(self):
+        """Run a test that is the equivalent of:
+
+        xym.py --strict --strict-examples test-file.txt
+        """
+        extracted_modules = xym.xym('resources/test-file-no-file-after-code-begins', './', './', True, False, 0,
+                                    force_revision_regexp=True)
+        self.assertTrue(len(extracted_modules)==1)
+        module_check = ['ietf-netconf-partial-lock@2009-10-19.yang']
+        for y in module_check:
+            self.assertTrue(y in extracted_modules)
+
+
+class TestCase_codeBegins_fileWithSymbol(TestCase_base):
+    def runTest(self):
+        """Run a test that is the equivalent of:
+
+        xym.py --strict --strict-examples test-file.txt
+        """
+        extracted_modules = xym.xym('resources/test-file-with-symbol', './', './', True, False, 0,
+                                    force_revision_regexp=True)
+        self.assertTrue(len(extracted_modules)==1)
+        module_check = ['ietf-netconf-notifications@2012-02-06.yang']
+        for y in module_check:
+            self.assertTrue(y in extracted_modules)
