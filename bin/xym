@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import argparse
-from xym import xym
+import xym
 import re
 
 def run():
