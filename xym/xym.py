@@ -67,11 +67,12 @@ class YangModuleExtractor:
     """
     MODULE_STATEMENT = re.compile('''^[ \t]*(sub)?module +(["'])?([-A-Za-z0-9]*(@[0-9-]*)?)(["'])? *\{.*$''')
     PAGE_TAG = re.compile('.*\[Page [0-9]*\].*')
-    CODE_ENDS_TAG = re.compile('^[ \t]*<CODE ENDS>.*$')
+    CODE_ENDS_TAG = re.compile('^[} \t]*<CODE ENDS>.*$')
     CODE_BEGINS_TAG = re.compile('^[ \t]*<CODE BEGINS>( *file(\W+"(.*)")?)?[ \t]*$')
     EXAMPLE_TAG = re.compile('^(example-)')
 
-    def __init__(self, src_id, dst_dir, strict=True, strict_examples=True, add_line_refs=False, debug_level=0):
+    def __init__(self, src_id, dst_dir, strict=True, strict_examples=True, strict_name=False, add_line_refs=False,
+                 debug_level=0):
         """
         Initializes class-global variables.
         :param src_id: text string containing the draft or RFC text from which YANG
@@ -80,6 +81,7 @@ class YangModuleExtractor:
         :param strict: Mode - if 'True', enforce <CODE BEGINS> / <CODE ENDS>;
                        if 'False', just look for 'module <name> {' and '}'
         :param strict_examples: Only output valid examples when in strict mode
+        :param strict_name: enforce name from module
         :param debug_level: If > 0 print some debug statements to the console
         :return:
         """
@@ -87,6 +89,7 @@ class YangModuleExtractor:
         self.dst_dir = dst_dir
         self.strict = strict
         self.strict_examples = strict_examples
+        self.strict_name = strict_name
         self.add_line_refs = add_line_refs
         self.debug_level = debug_level
         self.max_line_len = 0
@@ -397,6 +400,10 @@ class YangModuleExtractor:
             if self.CODE_ENDS_TAG.match(line):
                 if in_model is False and in_code is False:
                     self.warning("Line %d: misplaced <CODE ENDS>" % i)
+                if '}' in line:
+                    last_line_character = line.rfind('}') + 1
+                    last_line_text = line[:last_line_character]
+                    line = last_line_text
                 in_model = False
                 in_code = False
 
@@ -448,8 +455,11 @@ class YangModuleExtractor:
                 # to output at the end
                 if quotes == 0:
                     level = 1
-                if not output_file and level == 1 and quotes == 0:
-                    print("\nExtracting '%s'" % match.groups()[2])
+                if (self.strict_name or not output_file) and level == 1 and quotes == 0:
+                    if output_file:
+                        print("\nrewriting filename from '%s' to '%s'.yang" % (output_file, match.groups()[2]))
+                    else:
+                        print("\nExtracting '%s'" % match.groups()[2])
                     output_file = '%s.yang' % match.groups()[2].strip('"\'')
                     if self.debug_level > 0:
                         print('   Getting YANG file name from module name: %s' % output_file)
@@ -543,8 +553,8 @@ class YangModuleExtractor:
             self.error("Line %d - Missing <CODE ENDS>" % i)
 
 
-def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_level=0, add_line_refs=False,
-        force_revision_pyang=False, force_revision_regexp=False):
+def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examples=False, debug_level=0,
+        add_line_refs=False, force_revision_pyang=False, force_revision_regexp=False):
     """
     Extracts YANG model from an IETF RFC or draft text file.
     This is the main (external) API entry for the module.
@@ -556,6 +566,8 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_le
            the directory where the file is located
     :param dstdir: Directory where to put the extracted YANG models
     :param strict: Strict syntax enforcement
+    :param strict_name: Strict name enforcement - name resolved from module name and not from the document
+           after code begins
     :param strict_examples: Only output valid examples when in strict mode
     :param debug_level: Determines how much debug output is printed to the console
     :param force_revision_regexp: Whether it should create a <filename>@<revision>.yang even on error using regexp
@@ -575,7 +587,7 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_examples=False, debug_le
                      r'(?:/?|[/?]\S+)$', re.IGNORECASE)
     rqst_hdrs = {'Accept': 'text/plain', 'Accept-Charset': 'utf-8'}
 
-    ye = YangModuleExtractor(source_id, dstdir, strict, strict_examples, add_line_refs, debug_level)
+    ye = YangModuleExtractor(source_id, dstdir, strict, strict_examples, strict_name, add_line_refs, debug_level)
     is_url = url.match(source_id)
     if is_url:
         r = requests.get(source_id, headers=rqst_hdrs)
@@ -615,6 +627,11 @@ if __name__ == "__main__":
     parser.add_argument("--dstdir", default='.',
                         help="Optional: directory where to put the extracted "
                              "YANG module(s); default is './'")
+    parser.add_argument("--strict-name", action='store_true', default=False,
+                        help="Optional flag that determines name enforcement; "
+                             "If set to 'True', name will be resolved from module "
+                             "itself and not from name given in the document;"
+                             " default is 'False'")
     parser.add_argument("--strict", action='store_true', default=False,
                         help="Optional flag that determines syntax enforcement; "
                              "If set to 'True', the <CODE BEGINS> / <CODE ENDS> "
