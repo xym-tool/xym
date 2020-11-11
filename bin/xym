@@ -21,6 +21,12 @@ def run():
         "'If set to 'True', the <CODE BEGINS> / <CODE ENDS> "
         "tags are required; default is 'False'")
     parser.add_argument(
+        "--strict-name", action='store_true', default=False,
+        help="Optional flag that determines name enforcement; "
+             "If set to 'True', name will be resolved from module "
+             "itself and not from name given in the document;"
+             " default is 'False'")
+    parser.add_argument(
         "--strict-examples", action='store_true', default=False,
         help="Only output valid examples when in strict mode")
     parser.add_argument(
@@ -49,6 +55,7 @@ def run():
                                args.srcdir,
                                args.dstdir,
                                args.strict,
+                               args.strict_name,
                                args.strict_examples,
                                args.debug,
                                force_revision_pyang=args.force_revision_pyang,
