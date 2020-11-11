@@ -457,10 +457,13 @@ class YangModuleExtractor:
                     level = 1
                 if (self.strict_name or not output_file) and level == 1 and quotes == 0:
                     if output_file:
-                        print("\nrewriting filename from '%s' to '%s'.yang" % (output_file, match.groups()[2]))
+                        revision = output_file.split('@')[-1].split('.')[0]
+                        print("\nrewriting filename from '%s' to '%s@%s.yang'" % (output_file, match.groups()[2],
+                                                                                  revision))
+                        output_file = '{}@{}.yang'.format(match.groups()[2].strip('"\''), revision)
                     else:
                         print("\nExtracting '%s'" % match.groups()[2])
-                    output_file = '%s.yang' % match.groups()[2].strip('"\'')
+                        output_file = '%s.yang' % match.groups()[2].strip('"\'')
                     if self.debug_level > 0:
                         print('   Getting YANG file name from module name: %s' % output_file)
 
