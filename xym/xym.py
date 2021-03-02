@@ -69,7 +69,7 @@ class YangModuleExtractor:
     MODULE_STATEMENT = re.compile('''^[ \t]*(sub)?module +(["'])?([-A-Za-z0-9]*(@[0-9-]*)?)(["'])? *\{.*$''')
     PAGE_TAG = re.compile('.*\[Page [0-9]*\].*')
     CODE_ENDS_TAG = re.compile('^[} \t]*<CODE ENDS>.*$')
-    CODE_BEGINS_TAG = re.compile('^[ \t]*<CODE BEGINS>( *file(\W+"(.*)")?)?[ \t]*$')
+    CODE_BEGINS_TAG = re.compile('^[ \t\r\n]*<CODE BEGINS>( *file(\W+"(.*)")?)?[ \t\r\n]*$')
     EXAMPLE_TAG = re.compile('^(example-)')
 
     def __init__(self, src_id, dst_dir, strict=True, strict_examples=True, strict_name=False, add_line_refs=False,
