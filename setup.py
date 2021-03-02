@@ -24,5 +24,6 @@ setup(
   install_requires=install_reqs,
   include_package_data=True,
   keywords=['yang', 'extraction'],
+  python_requires='>=3.4',
   classifiers=[],
 )
