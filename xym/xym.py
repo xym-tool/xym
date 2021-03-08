@@ -14,7 +14,7 @@ from pyang import plugin, error
 from pyang.plugins.name import emit_name
 from requests.packages.urllib3 import disable_warnings
 
-from xym.pyangHelper.yangParser import create_context
+from .yangParser import create_context
 
 __author__    = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com, einarnn@gmail.com'
 __copyright__ = "Copyright(c) 2015, 2016, 2017, 2020 Cisco Systems, Inc."
@@ -155,7 +155,11 @@ class YangModuleExtractor:
             models.extend(self.extracted_models)
             for model in models:
                 if force_revision_pyang:
-                    ctx = create_context(':'.join(self.dst_dir))
+                    if isinstance(self.dst_dir, list):
+                        path = ':'.join(self.dst_dir)
+                    else:
+                        path = self.dst_dir
+                    ctx = create_context(path)
                     ctx.opts.print_revision = True
                     for p in plugin.plugins:
                         p.setup_ctx(ctx)
@@ -225,7 +229,7 @@ class YangModuleExtractor:
                                 switch_items = True
 
                             # check for model revision if correct
-                            if real_model_revision != existing_model_revision:
+                            if real_model_revision.strip('@') != existing_model_revision:
                                 self.error(existing_model_name + ' model revision ' + existing_model_revision
                                            + ' is wrong or has incorrect format')
                                 switch_items = True
