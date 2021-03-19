@@ -2,17 +2,19 @@
 from __future__ import print_function  # Must be at the beginning of the file
 
 import argparse
+import io
 import os
 import os.path
 import re
-import shlex
 import sys
-import xym
 from collections import Counter
-from subprocess import Popen, PIPE
 
 import requests
+from pyang import plugin, error
+from pyang.plugins.name import emit_name
 from requests.packages.urllib3 import disable_warnings
+
+from .yangParser import create_context
 
 __author__    = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com, einarnn@gmail.com'
 __copyright__ = "Copyright(c) 2015, 2016, 2017, 2020 Cisco Systems, Inc."
@@ -140,10 +142,12 @@ class YangModuleExtractor:
                         bt = m.group(1)
                         continue
 
+        if mrev is not None and mrev.rstrip() != '':
+            mrev = '@' + mrev
         if bt != '':
-            return mname + '@' + mrev + ' (belongs-to {})'.format(bt)
+            return mname + mrev + ' (belongs-to {})'.format(bt)
 
-        return mname + '@' + mrev
+        return mname + mrev
 
     def get_extracted_models(self, force_revision_pyang, force_revision_regexp):
         if force_revision_pyang or force_revision_regexp:
@@ -151,21 +155,57 @@ class YangModuleExtractor:
             models.extend(self.extracted_models)
             for model in models:
                 if force_revision_pyang:
-                    command = '/usr/local/bin/pyang -f name-revision "' + self.dst_dir + '/' + model + '"'
-                    proc = Popen(shlex.split(command), stdout=PIPE, stderr=PIPE)
-                    out, err = proc.communicate()
+                    if isinstance(self.dst_dir, list):
+                        path = ':'.join(self.dst_dir)
+                    else:
+                        path = self.dst_dir
+                    ctx = create_context(path)
+                    ctx.opts.print_revision = True
+                    for p in plugin.plugins:
+                        p.setup_ctx(ctx)
+                    with open(self.dst_dir + '/' + model, 'r', encoding="utf-8") as yang_file:
+                        module = yang_file.read()
+                        m = ctx.add_module(self.dst_dir + '/' + model, module)
+                        if m is None:
+                            m = []
+                        else:
+                            m = [m]
+                    ctx.validate()
+
+                    f = io.StringIO()
+                    emit_name(ctx, m, f)
+                    out = f.getvalue()
+
                     if out.rstrip() == '':
+
+                        def __print_pyang_output(ctx):
+                            err = ''
+                            for (epos, etag, eargs) in ctx.errors:
+                                elevel = error.err_level(etag)
+                                if error.is_warning(elevel):
+                                    kind = "warning"
+                                else:
+                                    kind = "error"
+
+                                err += str(epos) + ': %s: ' % kind + \
+                                       error.err_to_str(etag, eargs) + '\n'
+                            return err
+
+                        err = __print_pyang_output(ctx)
                         if err:
-                            self.error('extracting revision from file with: pyang -f name-revision ' + self.dst_dir +
+                            self.error('extracting revision from file with pyang ' + self.dst_dir +
                                        '/' + model + ' has following errors:\n' + err)
                 else:
                     out = self.get_mod_rev(self.dst_dir + '/' + model)
 
                 real_model_name_revision = out.rstrip()
                 if real_model_name_revision != '':
-                    real_model_revision = real_model_name_revision.split('@')[1][0:10]
+                    if '@' in real_model_name_revision:
+                        real_model_revision = '@' + real_model_name_revision.split('@')[1][0:10]
+                    else:
+                        real_model_revision = ''
                     real_model_name = real_model_name_revision.split('@')[0]
-                    real_model_name_revision = real_model_name + '@' + real_model_revision
+                    real_model_name_revision = real_model_name + real_model_revision
                     if force_revision_regexp:
                         missing_revision_symbol = ''
                     else:
@@ -189,7 +229,7 @@ class YangModuleExtractor:
                                 switch_items = True
 
                             # check for model revision if correct
-                            if real_model_revision != existing_model_revision:
+                            if real_model_revision.strip('@') != existing_model_revision:
                                 self.error(existing_model_name + ' model revision ' + existing_model_revision
                                            + ' is wrong or has incorrect format')
                                 switch_items = True
