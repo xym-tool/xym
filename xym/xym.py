@@ -308,8 +308,8 @@ class YangModuleExtractor:
         ncnt = 0
         output_model = []
         for ln in input_model:
-            if ln[0].strip(' \n\r') is '':
-                if ncnt is 0:
+            if ln[0].strip(' \n\r') == '':
+                if ncnt == 0:
                     output_model.append(ln)
                 elif self.debug_level > 1:
                         self.debug_print_strip_msg(ln[1] - 1, ln[0])
@@ -491,10 +491,18 @@ class YangModuleExtractor:
                 #         level = 1
                 # else:
                 #     level = 1
-
-                # always set the level to 1; we decide whether or not
-                # to output at the end
-                if quotes == 0:
+                
+                # when "example" is matched in strict-examples mode, level is set to 1; 
+                # this enables to make example module in strict-examples mode
+                if self.strict_examples and example_match and quotes == 0:
+                    level = 1
+                # when "example" is matched in strict mode, level is set to 0; skipping example model in strict mode
+                # also checking if the module is not inside a CODE BEGINS section; 
+                # (might be unfinished, e.g. missing {parenthesis})
+                elif self.strict and example_match and not in_code:
+                    level = 0
+                # if not in strict modes, level is set to 1
+                elif quotes == 0:
                     level = 1
                 if (self.strict_name or not output_file) and level == 1 and quotes == 0:
                     if output_file:
