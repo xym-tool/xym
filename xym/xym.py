@@ -494,7 +494,7 @@ class YangModuleExtractor:
                 
                 # when "example" is matched in strict-examples mode, level is set to 1; 
                 # this enables to make example module in strict-examples mode
-                if self.strict_examples and example_match and quotes == 0:
+                if self.strict_examples and example_match:
                     level = 1
                 # when "example" is matched in strict mode, level is set to 0; skipping example model in strict mode
                 # also checking if the module is not inside a CODE BEGINS section; 
@@ -502,7 +502,7 @@ class YangModuleExtractor:
                 elif self.strict and example_match and not in_code:
                     level = 0
                 # if not in strict modes, level is set to 1
-                elif quotes == 0:
+                else:
                     level = 1
                 if (self.strict_name or not output_file) and level == 1 and quotes == 0:
                     if output_file:
