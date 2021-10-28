@@ -419,7 +419,37 @@ class YangModuleExtractor:
                 return
             self.debug_print_strip_msg(model[-1][1] - 1, model[-1][0])
             model.pop()
-
+            
+    def check_edge_cases(self, example_match, in_code):
+        """
+        Checks for edge cases and set level to appropriate value.
+        
+        :param example_match: if example is matched in module name 
+        :param in_code: if module in CODE BEGINS section 
+        :return: level value
+        """
+        # skip all "not example" modules in strict-examples mode
+        if self.strict_examples and not example_match:
+            if self.parse_only_modules:
+                self.warning("Unable to parse not example module in strict-example mode")
+            return 0
+        # skip all example modules in <CODE BEGINS> section in strict-example mode 
+        elif self.strict_examples and example_match and in_code:
+            if self.parse_only_modules:
+                self.warning("Unable to parse example module in <CODE BEGINS> section in strict-example mode")
+            return 0
+        # check if we are not parsing example module in strict mode
+        elif self.strict and not self.strict_examples and example_match and not in_code:
+            if self.parse_only_modules:
+                self.warning("Unable to parse example module in strict mode")
+            return 0
+        # skip all modules outside <CODE BEGINS> section in strict mode
+        elif self.strict and not self.strict_examples and not in_code:
+            return 0
+        # enable to parse this module
+        else:
+            return 1
+            
     def extract_yang_model(self, content):
         """
         Extracts one or more YANG models from an RFC or draft text string in
@@ -501,21 +531,7 @@ class YangModuleExtractor:
                     # finding current module name in the list
                     if match.groups()[2] in self.parse_only_modules or output_file in self.parse_only_modules:
                         # check if we are not parsing example module in strict mode
-                        if self.strict and not self.strict_examples and example_match and not in_code:
-                            self.warning("Unable to parse example module in strict mode")
-                            level = 0
-                        # skip all "not example" modules in strict-examples mode
-                        elif self.strict_examples and not example_match:
-                            level = 0
-                        # skip all example modules in <CODE BEGINS> section in strict-example mode 
-                        elif self.strict_examples and example_match and in_code:
-                            level = 0
-                        # skip all modules outside <CODE BEGINS> section in strict mode
-                        elif self.strict and not self.strict_examples and not in_model:
-                            level = 0
-                        # enable to parse this module
-                        else:
-                            level = 1
+                        level = self.check_edge_cases(example_match, in_code)
                     # set level to 0 to skip modules not in the list
                     else: 
                         level = 0
@@ -526,39 +542,10 @@ class YangModuleExtractor:
                         # set level to 0 to skip this module
                         print("\nSkipping '%s'" % match.groups()[2])
                         level = 0
-                    # skip all "not example" modules in strict-examples mode
-                    elif self.strict_examples and not example_match:
-                        level = 0
-                    # skip all example modules in <CODE BEGINS> section in strict-example mode
-                    elif self.strict_examples and example_match and in_code:
-                        level = 0
-                    # skip all modules outside <CODE BEGINS> section in strict mode
-                    elif self.strict and not self.strict_examples and not in_model:
-                        level = 0
-                    # check if we are not parsing example module in strict mode
-                    elif self.strict and not self.strict_examples and example_match and not in_code:
-                        level = 0
-                    # set level to 1 to enable parse this module
                     else:
-                        level = 1
+                        level = self.check_edge_cases(example_match, in_code)
                 else:
-                    # skip all "not example" modules in strict-examples mode
-                    if self.strict_examples and not example_match:
-                        level = 0
-                    # skip all example modules in <CODE BEGINS> section in strict-example mode
-                    elif self.strict_examples and example_match and in_code:
-                        level = 0
-                    # when "example" is matched in strict mode, level is set to 0; skipping example model in strict mode
-                    # also checking if the module is not inside a CODE BEGINS section; 
-                    # (might be unfinished, e.g. missing {parenthesis})
-                    elif self.strict and not self.strict_examples and example_match and not in_code:
-                        level = 0
-                    # skip all modules outside <CODE BEGINS> section in strict mode
-                    elif self.strict and not self.strict_examples and not in_model:
-                        level = 0
-                    # in another cases set level to 1
-                    else:
-                        level = 1
+                    level = self.check_edge_cases(example_match, in_code)
                 
                 if level == 1:
                     print("\nExtracting '%s'" % match.groups()[2])
@@ -605,14 +592,7 @@ class YangModuleExtractor:
                         else:
                             level += (counter['{'] - counter['}'])
                     if level == 1:
-                        if self.strict:
-                            if self.strict_examples:
-                                if example_match and not in_model:
-                                    self.write_model_to_file(model, output_file)
-                            elif in_model:
-                                self.write_model_to_file(model, output_file)
-                        else:
-                            self.write_model_to_file(model, output_file)
+                        self.write_model_to_file(model, output_file)
                         self.max_line_len = 0
                         model = []
                         output_file = None
