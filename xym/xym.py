@@ -498,40 +498,49 @@ class YangModuleExtractor:
                 
                 # check for parse only modules list
                 if self.parse_only_modules:
-                    # set level to 0 to skip modules not in the list 
-                    level = 0
                     # finding current module name in the list
                     if match.groups()[2] in self.parse_only_modules or output_file in self.parse_only_modules:
                         # check if we are not parsing example module in strict mode
                         if self.strict and not self.strict_examples and example_match and not in_code:
                             self.warning("Unable to parse example module in strict mode")
+                            level = 0
+                        # skip all "not example" modules in strict-examples mode
+                        elif self.strict_examples and not example_match:
+                            level = 0
+                        # skip all example modules in <CODE BEGINS> section in strict-example mode 
+                        elif self.strict_examples and example_match and in_code:
+                            level = 0
+                        # skip all modules outside <CODE BEGINS> section in strict mode
+                        elif self.strict and not self.strict_examples and not in_model:
+                            level = 0
                         # enable to parse this module
                         else:
                             level = 1
-                    # skip all "not example" modules in strict-examples mode
-                    if level == 1 and self.strict_examples and not example_match:
-                        level = 0
-                    # skip all example modules in <CODE BEGINS> section in strict-example mode 
-                    if level == 1 and self.strict_examples and example_match and in_code:
+                    # set level to 0 to skip modules not in the list
+                    else: 
                         level = 0
                 # check for skip modules list
                 elif self.skip_modules:
-                    # set level to 1 to enable parse this module
-                    level = 1
-                    # check if we are not parsing example module in strict mode
-                    if self.strict and not self.strict_examples and example_match and not in_code:
-                        level = 0
                     # finding current module name in the list
-                    elif match.groups()[2] in self.skip_modules or output_file in self.skip_modules:
+                    if match.groups()[2] in self.skip_modules or output_file in self.skip_modules:
                         # set level to 0 to skip this module
                         print("\nSkipping '%s'" % match.groups()[2])
                         level = 0
                     # skip all "not example" modules in strict-examples mode
-                    if level == 1 and self.strict_examples and not example_match:
+                    elif self.strict_examples and not example_match:
                         level = 0
                     # skip all example modules in <CODE BEGINS> section in strict-example mode
-                    if level == 1 and self.strict_examples and example_match and in_code:
+                    elif self.strict_examples and example_match and in_code:
                         level = 0
+                    # skip all modules outside <CODE BEGINS> section in strict mode
+                    elif self.strict and not self.strict_examples and not in_model:
+                        level = 0
+                    # check if we are not parsing example module in strict mode
+                    elif self.strict and not self.strict_examples and example_match and not in_code:
+                        level = 0
+                    # set level to 1 to enable parse this module
+                    else:
+                        level = 1
                 else:
                     # skip all "not example" modules in strict-examples mode
                     if self.strict_examples and not example_match:
@@ -543,6 +552,9 @@ class YangModuleExtractor:
                     # also checking if the module is not inside a CODE BEGINS section; 
                     # (might be unfinished, e.g. missing {parenthesis})
                     elif self.strict and not self.strict_examples and example_match and not in_code:
+                        level = 0
+                    # skip all modules outside <CODE BEGINS> section in strict mode
+                    elif self.strict and not self.strict_examples and not in_model:
                         level = 0
                     # in another cases set level to 1
                     else:
