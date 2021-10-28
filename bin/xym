@@ -49,6 +49,15 @@ def run():
     parser.add_argument(
         "--version", action='version',
         version='%(prog)s {version}'.format(version=__version__))
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument(
+        "--parse-only-modules", nargs='+',
+        help="Optional: it will parse only modules added in the list in arguments."
+    )
+    group.add_argument(
+        "--skip-modules", nargs='+',
+        help="Optional: it will skip modules added in the list in arguments."
+    )
 
     args = parser.parse_args()
 
@@ -60,7 +69,9 @@ def run():
                                args.strict_examples,
                                args.debug,
                                force_revision_pyang=args.force_revision_pyang,
-                               force_revision_regexp=args.force_revision_regexp)
+                               force_revision_regexp=args.force_revision_regexp,
+                               skip_modules=args.skip_modules,
+                               parse_only_modules=args.parse_only_modules)
     if len(extracted_models) > 0:
         if args.strict:
             print("Created the following models that conform to the strict guidelines:")
