@@ -491,19 +491,28 @@ class YangModuleExtractor:
                 #         level = 1
                 # else:
                 #     level = 1
-                
-                # when "example" is matched in strict-examples mode, level is set to 1; 
-                # this enables to make example module in strict-examples mode
-                if self.strict_examples and example_match:
-                    level = 1
+
+                # skip all "not example" modules in strict-examples mode
+                if self.strict_examples and not example_match:
+                    level = 0
+                # skip all example modules in <CODE BEGINS> section in strict-example mode
+                elif self.strict_examples and example_match and in_code:
+                    level = 0
                 # when "example" is matched in strict mode, level is set to 0; skipping example model in strict mode
                 # also checking if the module is not inside a CODE BEGINS section; 
                 # (might be unfinished, e.g. missing {parenthesis})
-                elif self.strict and example_match and not in_code:
+                elif self.strict and not self.strict_examples and example_match and not in_code:
                     level = 0
-                # if not in strict modes, level is set to 1
+                # skip all modules outside <CODE BEGINS> section in strict mode
+                elif self.strict and not self.strict_examples and not in_model:
+                    level = 0
+                # in another cases set level to 1
                 else:
                     level = 1
+                
+                if level == 1:
+                    print("\nExtracting '%s'" % match.groups()[2])
+
                 if (self.strict_name or not output_file) and level == 1 and quotes == 0:
                     if output_file:
                         revision = output_file.split('@')[-1].split('.')[0]
@@ -511,7 +520,6 @@ class YangModuleExtractor:
                                                                                   revision))
                         output_file = '{}@{}.yang'.format(match.groups()[2].strip('"\''), revision)
                     else:
-                        print("\nExtracting '%s'" % match.groups()[2])
                         output_file = '%s.yang' % match.groups()[2].strip('"\'')
                     if self.debug_level > 0:
                         print('   Getting YANG file name from module name: %s' % output_file)
@@ -590,7 +598,6 @@ class YangModuleExtractor:
                 mg = match.groups()
                 # Get the YANG module's file name
                 if mg[2]:
-                    print("\nExtracting '%s'" % match.groups()[2])
                     output_file = mg[2].strip()
                 else:
                     if mg[0] and mg[1] is None:
