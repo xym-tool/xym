@@ -555,14 +555,7 @@ class YangModuleExtractor:
                         else:
                             level += (counter['{'] - counter['}'])
                     if level == 1:
-                        if self.strict:
-                            if self.strict_examples:
-                                if example_match and not in_model:
-                                    self.write_model_to_file(model, output_file)
-                            elif in_model:
-                                self.write_model_to_file(model, output_file)
-                        else:
-                            self.write_model_to_file(model, output_file)
+                        self.write_model_to_file(model, output_file)
                         self.max_line_len = 0
                         model = []
                         output_file = None
