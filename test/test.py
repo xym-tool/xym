@@ -124,3 +124,90 @@ class TestCase_forceRevisionRegexp(TestCase_base):
                         'ex-vlan.yang']
         for y in module_check:
             self.assertTrue(y in extracted_modules)
+
+class TestCase_parseonlymodules(TestCase_base):
+    def runTest(self):
+        """Run a test that is the equivalent of:
+
+        xym.py --parse-only-modules test-valid example-error.yang source test-file.txt
+        """
+        extracted_modules = xym.xym('resources/test-file.txt', './', './', 
+                                    strict=False, 
+                                    strict_examples=False,
+                                    debug_level=0, 
+                                    parse_only_modules=['test-valid', 'example-error.yang'])
+        self.assertTrue(len(extracted_modules) == 2)
+        module_check = ['test-valid.yang', 'example-error.yang']
+        for y in module_check:
+            self.assertTrue(y in extracted_modules)
+            
+class TestCase_skipmodules(TestCase_base):
+    def runTest(self):
+        """Run a test that is the equivalent of:
+
+        xym.py --skip-modules test-valid ex-no-error.yang source test-file.txt
+        """
+        extracted_modules = xym.xym('resources/test-file.txt', './', './', 
+                                    strict=False, 
+                                    strict_examples=False,
+                                    debug_level=0, 
+                                    skip_modules=['test-valid', 'ex-no-error.yang'])
+        self.assertTrue(len(extracted_modules) == 3)
+        module_check = ['example-no-error.yang', 'ex-error.yang', 'example-error.yang']
+        for y in module_check:
+            self.assertTrue(y in extracted_modules)
+
+class TestCase_strict_parseonlymodules(TestCase_base):
+    def runTest(self):
+        """Run a test that is the equivalent of:
+
+        xym.py --strict --parse-only-modules example-no-error source test-file.txt
+        """
+        extracted_modules = xym.xym('resources/test-file.txt', './', './', 
+                                    strict=True, 
+                                    strict_examples=False,
+                                    debug_level=0, 
+                                    parse_only_modules=['example-no-error'])
+        self.assertTrue(len(extracted_modules) == 0)
+            
+class TestCase_strict_skipmodules(TestCase_base):
+    def runTest(self):
+        """Run a test that is the equivalent of:
+
+        xym.py --strict --skip-modules ex-error ex-no-error example-error test-valid source test-file.txt
+        """
+        extracted_modules = xym.xym('resources/test-file.txt', './', './', 
+                                    strict=True, 
+                                    strict_examples=False,
+                                    debug_level=0, 
+                                    skip_modules=['ex-error', 'ex-no-error', 'example-error', 'test-valid'])
+        self.assertTrue(len(extracted_modules) == 0)
+
+
+class TestCase_strict_examples_parseonlymodules(TestCase_base):
+    def runTest(self):
+        """Run a test that is the equivalent of:
+
+        xym.py --strict --strict-examples --parse-only-modules ex-error ex-no-error example-error test-valid \
+        source test-file.txt
+        """
+        extracted_modules = xym.xym('resources/test-file.txt', './', './', 
+                                    strict=True, 
+                                    strict_examples=True,
+                                    debug_level=0, 
+                                    parse_only_modules=['ex-error', 'test-valid', 'ex-no-error', 'example-error'])
+        self.assertTrue(len(extracted_modules) == 0)
+
+
+class TestCase_strict_examples_skipmodules(TestCase_base):
+    def runTest(self):
+        """Run a test that is the equivalent of:
+
+        xym.py --strict --strict-examples --skip-modules example-no-error source test-file.txt 
+        """
+        extracted_modules = xym.xym('resources/test-file.txt', './', './', 
+                                    strict=True, 
+                                    strict_examples=True,
+                                    debug_level=0,
+                                    skip_modules=['example-no-error'])
+        self.assertTrue(len(extracted_modules) == 0)
