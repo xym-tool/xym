@@ -549,7 +549,7 @@ class YangModuleExtractor:
                 
                 if level == 1:
                     print("\nExtracting '%s'" % match.groups()[2])
-                        
+           
                 if (self.strict_name or not output_file) and level == 1 and quotes == 0:
                     if output_file:
                         revision = output_file.split('@')[-1].split('.')[0]
