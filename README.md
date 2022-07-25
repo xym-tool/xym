@@ -62,7 +62,7 @@ optional arguments:
   --version          show program's version number and exit
 ```
 
-The following behavior is implemented with respect to the "strict" and "strict-exmaples" options (none of the other options influence this behavior):
+The following behavior is implemented with respect to the "strict" and "strict-examples" options (none of the other options influence this behavior):
 
 * No options -- all yang modules found in the source file will be extracted and yang files created.
 * ```--strict``` -- only yang modules bracketed by \<CODE BEGINS\> and \<CODE-ENDS\> will be extracted
