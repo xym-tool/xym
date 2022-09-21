@@ -7,6 +7,7 @@ import os
 import os.path
 import re
 import sys
+import xml.etree.ElementTree as ET
 from collections import Counter
 
 import requests
@@ -449,8 +450,32 @@ class YangModuleExtractor:
         # enable to parse this module
         else:
             return 1
-            
-    def extract_yang_model(self, content):
+
+    def should_parse_module(self, module_name, output_file):
+            if self.parse_only_modules:
+                if module_name not in self.parse_only_modules and output_file not in self.parse_only_modules:
+                    return False
+            elif self.skip_modules:
+                if module_name in self.skip_modules or output_file in self.skip_modules:
+                    print("\nSkipping '%s'" % module_name)
+                    return False
+            return True
+
+    def change_output_file_name(self, output_file, module_name):
+        ret = output_file
+        if (self.strict_name or not output_file):
+            if output_file:
+                revision = output_file.split('@')[-1].split('.')[0]
+                print("\nrewriting filename from '%s' to '%s@%s.yang'" % (output_file, match.groups()[2],
+                                                                        revision))
+                ret = '{}@{}.yang'.format(module_name, revision)
+            else:
+                ret = '%s.yang' % module_name
+            if self.debug_level > 0:
+                print('   Getting YANG file name from module name: %s' % ret)
+        return ret
+    
+    def extract_yang_model_text(self, content):
         """
         Extracts one or more YANG models from an RFC or draft text string in
         which the models are specified. The function skips over page
@@ -468,8 +493,9 @@ class YangModuleExtractor:
         i = 0
         level = 0
         quotes = 0
-        while i < len(content):
-            line = content[i]
+        lines = content.splitlines(True)
+        while i < len(lines):
+            line = lines[i]
 
             # Try to match '<CODE ENDS>'
             if self.CODE_ENDS_TAG.match(line):
@@ -527,59 +553,35 @@ class YangModuleExtractor:
                 #     level = 1
                 
                 # check for parse only modules list
-                if self.parse_only_modules:
-                    # finding current module name in the list
-                    if match.groups()[2] in self.parse_only_modules or output_file in self.parse_only_modules:
-                        # check if we are not parsing example module in strict mode
-                        level = self.check_edge_cases(example_match, in_code)
-                    # set level to 0 to skip modules not in the list
-                    else: 
-                        level = 0
-                # check for skip modules list
-                elif self.skip_modules:
-                    # finding current module name in the list
-                    if match.groups()[2] in self.skip_modules or output_file in self.skip_modules:
-                        # set level to 0 to skip this module
-                        print("\nSkipping '%s'" % match.groups()[2])
-                        level = 0
-                    else:
-                        level = self.check_edge_cases(example_match, in_code)
-                else:
+                if self.should_parse_module(match.groups()[2], output_file):
                     level = self.check_edge_cases(example_match, in_code)
+                else:
+                    level = 0
                 
                 if level == 1:
                     print("\nExtracting '%s'" % match.groups()[2])
-           
-                if (self.strict_name or not output_file) and level == 1 and quotes == 0:
-                    if output_file:
-                        revision = output_file.split('@')[-1].split('.')[0]
-                        print("\nrewriting filename from '%s' to '%s@%s.yang'" % (output_file, match.groups()[2],
-                                                                                  revision))
-                        output_file = '{}@{}.yang'.format(match.groups()[2].strip('"\''), revision)
-                    else:
-                        output_file = '%s.yang' % match.groups()[2].strip('"\'')
-                    if self.debug_level > 0:
-                        print('   Getting YANG file name from module name: %s' % output_file)
+                    if quotes == 0:
+                        output_file = self.change_output_file_name(output_file, match.groups()[2].strip('"\''))
 
             if level > 0:
-                self.debug_print_line(i, level, content[i])
+                self.debug_print_line(i, level, lines[i])
                 # Try to match the Footer ('[Page <page_num>]')
                 # If match found, skip over page headers and footers
                 if self.PAGE_TAG.match(line):
                     self.strip_empty_lines_backward(model, 3)
-                    self.debug_print_strip_msg(i, content[i])
+                    self.debug_print_strip_msg(i, lines[i])
                     i += 1        # Strip the
                     # Strip empty lines between the Footer and the next page Header
-                    i = self.strip_empty_lines_forward(content, i)
-                    if i < len(content):
-                        self.debug_print_strip_msg(i, content[i])
+                    i = self.strip_empty_lines_forward(lines, i)
+                    if i < len(lines):
+                        self.debug_print_strip_msg(i, lines[i])
                         i += 1      # Strip the next page Header
                     else:
                         self.error("<End of File> - EOF encountered while parsing the model")
                         return
                     # Strip empty lines between the page Header and real content on the page
-                    i = self.strip_empty_lines_forward(content, i) - 1
-                    if i >= len(content):
+                    i = self.strip_empty_lines_forward(lines, i) - 1
+                    if i >= len(lines):
                         self.error("<End of File> - EOF encountered while parsing the model")
                         return
                 else:
@@ -606,12 +608,12 @@ class YangModuleExtractor:
                 # If we matched 'CODE BEGINS', but not the file name, look on
                 # following lines for a complete match
                 while match and not line.rstrip(' \t\r\n').endswith('"'):
-                    if self.MODULE_STATEMENT.match(content[j + 1]):
+                    if self.MODULE_STATEMENT.match(lines[j + 1]):
                         break
                     j += 1
-                    if j >= len(content):
+                    if j >= len(lines):
                         break
-                    line = line.rstrip(' \t\r\n') + content[j].strip(' ')
+                    line = line.rstrip(' \t\r\n') + lines[j].strip(' ')
                     match = self.CODE_BEGINS_TAG.match(line)
                 # if we ended up with an actual match, update our line
                 # counter; otherwise forget the scan for the file name
@@ -641,10 +643,53 @@ class YangModuleExtractor:
         if in_model is True:
             self.error("Line %d - Missing <CODE ENDS>" % i)
 
+    def extract_yang_model_xml(self, content):
+        root = ET.fromstring(content)
+        for sourcecode in root.iter('sourcecode'):
+            if sourcecode.get('type') != 'yang':
+                continue
+            if not sourcecode.text:
+                continue
+            lines = sourcecode.text.splitlines(True)
+            if '<CODE BEGINS>' in sourcecode.text:
+                self.extract_yang_model_text(lines)
+                continue
+            output_file = sourcecode.get('name')
+            match = None
+            i = 0
+            for i, line in enumerate(lines):
+                if match:
+                    break
+                match = self.MODULE_STATEMENT.match(line)
+            if match is None:
+                continue
+            lines = lines[i:]
+            if not output_file:
+                self.warning('Missing file name in <sourcecode>')
+            if match.group(2) or match.group(5):
+                self.warning('Module name should not be enclosed in quotes')
+            module_name = match.group(3)
+            example_match = self.EXAMPLE_TAG.match(module_name)
+            if module_name.startswith('ex-'):
+                self.warning("example YANG module '%s' not starting with 'example-'" % module_name)
+                example_match = True
+            if sourcecode.get('markers') == 'true' and example_match:
+                self.error("YANG module '%s' with markers and starting with 'example-'" % module_name)
+            elif sourcecode.get('markers') in ('false', None) and not example_match:
+                self.error("YANG module '%s' with no markers and not starting with 'example-'" % module_name)
+            if not self.should_parse_module(module_name, output_file):
+                continue
+            print("\nExtracting '%s'" % module_name)
+
+            output_file = self.change_output_file_name(output_file, module_name)
+            self.write_model_to_file([[line, -1] for line in lines], output_file)
+
+            
+
 
 def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examples=False, debug_level=0,
         add_line_refs=False, force_revision_pyang=False, force_revision_regexp=False, skip_modules=None,
-        parse_only_modules=None):
+        parse_only_modules=None, rfcxml=False):
     """
     Extracts YANG model from an IETF RFC or draft text file.
     This is the main (external) API entry for the module.
@@ -664,6 +709,7 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examp
     :param force_revision_pyang: Whether it should create a <filename>@<revision>.yang even on error using pyang
     :param skip_modules: it will skip modules in this list
     :param parse_only_modules: it will parse only modules in this list
+    "param rfcxml: Whether the input file is in RFCXMLv3 format
     :return: None
     """
 
@@ -686,20 +732,29 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examp
         r = requests.get(source_id, headers=rqst_hdrs)
         if r.status_code == 200:
             if sys.version_info >= (3, 4):
-                content = r.text.splitlines(True)
+                content = r.text
             else:
-                content = r.text.encode('utf8').splitlines(True)
-            ye.extract_yang_model(content)
+                content = r.text.encode('utf8')
+            if rfcxml:
+                ye.extract_yang_model_xml(content)
+            else:
+                ye.extract_yang_model_text(content)
         else:
             print("Failed to fetch file from URL '%s', error '%d'" % (source_id, r.status_code), file=sys.stderr)
     else:
         try:
             if sys.version_info >= (3, 4):
                 with open(os.path.join(srcdir, source_id), encoding='latin-1', errors='ignore') as sf:
-                    ye.extract_yang_model(sf.readlines())
+                    if rfcxml:
+                        ye.extract_yang_model_xml(sf.read())
+                    else:
+                        ye.extract_yang_model_text(sf.read())
             else:
                 with open(os.path.join(srcdir, source_id)) as sf:
-                    ye.extract_yang_model(sf.readlines())
+                    if rfcxml:
+                        ye.extract_yang_model_xml(sf.read())
+                    else:
+                        ye.extract_yang_model_text(sf.read())
         except IOError as ioe:
             print(ioe)
     return ye.get_extracted_models(force_revision_pyang, force_revision_regexp)
@@ -714,6 +769,8 @@ if __name__ == "__main__":
     parser.add_argument("source",
                         help="The URL or file name of the RFC/draft text from "
                              "which to get the model")
+    parser.add_argument("--rfcxml", action='store_ture', default=False,
+                        help="Parse a file in RFCXMLv3 format")
     parser.add_argument("--srcdir", default='.',
                         help="Optional: directory where to find the source "
                              "text; default is './'")
@@ -772,7 +829,8 @@ if __name__ == "__main__":
                            args.force_revision_pyang,
                            args.force_revision_regexp,
                            skip_modules=args.skip_modules,
-                           parse_only_modules=args.parse_only_modules
+                           parse_only_modules=args.parse_only_modules,
+                           rfcxml=args.rfcxml
     )
     if len(extracted_models) > 0:
         if args.strict:
