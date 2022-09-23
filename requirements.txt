@@ -1,2 +1,2 @@
 requests>=2.6
-pyang==2.4.0
+pyang>=2.5.0
