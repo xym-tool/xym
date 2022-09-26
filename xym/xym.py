@@ -69,11 +69,11 @@ class YangModuleExtractor:
     """
     Extract YANG modules from IETF RFC or draft text string.
     """
-    MODULE_STATEMENT = re.compile('''^[ \t]*(sub)?module +(["'])?([-A-Za-z0-9]*(@[0-9-]*)?)(["'])? *\{.*$''')
-    PAGE_TAG = re.compile('.*\[Page [0-9]*\].*')
-    CODE_ENDS_TAG = re.compile('^[} \t]*<CODE ENDS>.*$')
-    CODE_BEGINS_TAG = re.compile('^[ \t\r\n]*<CODE BEGINS>( *file(?:(\W+"(.*)")|(?:\W+"(.*)))?)?[ \t\r\n]*$')
-    EXAMPLE_TAG = re.compile('^(example-)')
+    MODULE_STATEMENT = re.compile(r'''^[ \t]*(sub)?module +(["'])?([-A-Za-z0-9]*(@[0-9-]*)?)(["'])? *\{.*$''')
+    PAGE_TAG = re.compile(r'.*\[Page [0-9]*\].*')
+    CODE_ENDS_TAG = re.compile(r'^[} \t]*<CODE ENDS>.*$')
+    CODE_BEGINS_TAG = re.compile(r'^[ \t\r\n]*<CODE BEGINS>( *file[\s=]+(?:(".*")|(\S*)))?[ \t\r\n]*$')
+    EXAMPLE_TAG = re.compile(r'^(example-)')
 
     def __init__(self, src_id, dst_dir, strict=True, strict_examples=True, strict_name=False, add_line_refs=False,
                  debug_level=0, skip_modules=None, parse_only_modules=None):
@@ -216,7 +216,7 @@ class YangModuleExtractor:
                     else:
                         missing_revision_symbol = '@'
                     if real_model_revision == missing_revision_symbol:
-                        self.error('yang module ' + model.split('@')[0] + ' does not contain revision')
+                        self.warning('yang module ' + model.split('@')[0] + ' does not contain a revision statement')
                         if real_model_name != model.split('@')[0].split('.')[0]:
                             self.error(model.split('@')[0] + ' model name is wrong')
                             self.change_model_name(model, real_model_name + '.yang')
@@ -241,14 +241,14 @@ class YangModuleExtractor:
 
                             # check for model name if correct
                             if real_model_name != existing_model_name:
-                                self.error(existing_model_name + ' name of the model is wrong: ' + existing_model_name)
+                                self.warning('file name ' + existing_model_name + ' does not match model name ' + real_model_name)
                                 switch_items = True
 
                             # if any of above are not correct change file
                             if switch_items:
                                 self.change_model_name(model, real_model_name_revision + '.yang')
                         else:
-                            self.error(real_model_name + ' model revision is missing')
+                            self.warning(real_model_name + ' revision not specified in file name')
                             self.change_model_name(model, real_model_name_revision + '.yang')
         return self.extracted_models
 
@@ -391,18 +391,18 @@ class YangModuleExtractor:
             print("     Stripping Line %d:" % (i + 1))
             hexdump(line)
 
-    def strip_empty_lines_forward(self, content, i):
+    def strip_empty_lines_forward(self, lines, i):
         """
         Skip over empty lines
-        :param content: parsed text
+        :param lines: parsed text
         :param i: current parsed line
         :return: number of skipped lined
         """
-        while i < len(content):
-            line = content[i].strip(' \r\n\t\f')
+        while i < len(lines):
+            line = lines[i].strip(' \r\n\t\f')
             if line != '':
                 break
-            self.debug_print_strip_msg(i, content[i])
+            self.debug_print_strip_msg(i, lines[i])
             i += 1  # Strip an empty line
         return i
 
@@ -466,7 +466,7 @@ class YangModuleExtractor:
         if (self.strict_name or not output_file):
             if output_file:
                 revision = output_file.split('@')[-1].split('.')[0]
-                print("\nrewriting filename from '%s' to '%s@%s.yang'" % (output_file, match.groups()[2],
+                print("\nrewriting filename from '%s' to '%s@%s.yang'" % (output_file, model_name,
                                                                         revision))
                 ret = '{}@{}.yang'.format(module_name, revision)
             else:
@@ -487,8 +487,8 @@ class YangModuleExtractor:
         """
         model = []
         output_file = None
-        in_model = False
         in_code = False
+        code_section_start = None
         example_match = False
         i = 0
         level = 0
@@ -499,14 +499,18 @@ class YangModuleExtractor:
 
             # Try to match '<CODE ENDS>'
             if self.CODE_ENDS_TAG.match(line):
-                if in_model is False and in_code is False:
+                if in_code is False:
                     self.warning("Line %d: misplaced <CODE ENDS>" % i)
+                if level != 0:
+                    self.error('Line %d - <CODE ENDS> encountered while parsing model' % i)
                 if '}' in line:
                     last_line_character = line.rfind('}') + 1
                     last_line_text = line[:last_line_character]
                     line = last_line_text
-                in_model = False
+                level = 0
                 in_code = False
+                output_file = None
+                code_section_start = None
 
             if "\"" in line:
                 if line.count("\"") % 2 == 0:
@@ -521,47 +525,43 @@ class YangModuleExtractor:
             match = self.MODULE_STATEMENT.match(line)
             if match:
                 # We're already parsing a module
-                if quotes == 0:
-                    if level > 0:
-                        self.error("Line %d - 'module' statement within another module" % i)
-                        return
+                if level:
+                    self.error("Line %d - 'module' statement within another module" % i)
+                    return
+
+                if in_code and output_file is None:
+                    self.warning('Line %d - Missing file name in <CODE BEGINS>' % code_section_start)
 
                 # Check if we should enforce <CODE BEGINS> / <CODE ENDS>
                 # if we do enforce, we ignore models  not enclosed in <CODE BEGINS> / <CODE ENDS>
-                if match.groups()[1] or match.groups()[4]:
+                if match.group(2) or match.group(5):
                     self.warning('Line %d - Module name should not be enclosed in quotes' % i)
+                
+                module_name = match.group(3)
 
                 # do the module name checking, etc.
-                example_match = self.EXAMPLE_TAG.match(match.groups()[2])
-                if in_model is True:
-                    if example_match:
-                        self.error("Line %d - YANG module '%s' with <CODE BEGINS> and starting with 'example-'" %
-                                   (i, match.groups()[2]))
-                else:
-                    if not example_match:
+                example_match = self.EXAMPLE_TAG.match(module_name)
+                if in_code and example_match:
+                    self.error("Line %d - YANG module '%s' with <CODE BEGINS> and starting with 'example-'" %
+                               (i, module_name))
+                elif not in_code and not example_match:
+                    if module_name.startswith('ex-'):
+                        self.warning("Line %d - example YANG module '%s' not starting with 'example-'" %
+                                     (i, module_name))
+                    else:
                         self.error("Line %d - YANG module '%s' with no <CODE BEGINS> and not starting with 'example-'" %
-                                   (i, match.groups()[2]))
+                                   (i, module_name))
 
-                # now decide if we're allowed to set the level
-                # (i.e. signal that we're in a module) to 1 and if
-                # we're allowed to output the module at all with the
-                # strict examples flag
-                # if self.strict is True:
-                #     if in_model is True:
-                #         level = 1
-                # else:
-                #     level = 1
-                
                 # check for parse only modules list
-                if self.should_parse_module(match.groups()[2], output_file):
+                if self.should_parse_module(module_name, output_file):
                     level = self.check_edge_cases(example_match, in_code)
                 else:
                     level = 0
                 
                 if level == 1:
-                    print("\nExtracting '%s'" % match.groups()[2])
+                    print("\nExtracting '%s'" % module_name)
                     if quotes == 0:
-                        output_file = self.change_output_file_name(output_file, match.groups()[2].strip('"\''))
+                        output_file = self.change_output_file_name(output_file, module_name.strip('"\''))
 
             if level > 0:
                 self.debug_print_line(i, level, lines[i])
@@ -603,44 +603,44 @@ class YangModuleExtractor:
             # Try to match '<CODE BEGINS>'
             match = self.CODE_BEGINS_TAG.match(line)
             if match:
+                code_section_start = i
+                if in_code:
+                    self.error("Line %d - Misplaced <CODE BEGINS> or missing <CODE ENDS>" % i)
+                if level:
+                    self.error("Line %d - <CODE BEGINS> within a model" % i)
+                    return
                 in_code = True
                 j = i
                 # If we matched 'CODE BEGINS', but not the file name, look on
                 # following lines for a complete match
-                while match and not line.rstrip(' \t\r\n').endswith('"'):
+                while match:
+                    if match.group(2):
+                        output_file = match.group(2).strip('"')
+                        break
+                    if match.group(3):
+                        # this is our best guess at whether we have the whole file name if it was unquoted
+                        if match.group(3).endswith('.yang'):
+                            self.warning("Line %d - Unquoted file name in <CODE BEINGS>" % i)
+                            output_file = match.group(3)
+                            break
                     if self.MODULE_STATEMENT.match(lines[j + 1]):
                         break
                     j += 1
                     if j >= len(lines):
                         break
-                    line = line.rstrip(' \t\r\n') + lines[j].strip(' ')
+                    line = line.rstrip() + lines[j].lstrip()
                     match = self.CODE_BEGINS_TAG.match(line)
+
+                    
                 # if we ended up with an actual match, update our line
                 # counter; otherwise forget the scan for the file name
-                if match:
+                if match and output_file:
                     i = j
-            if match:
-                # Found the beginning of the YANG module code section; make sure we're not parsing a model already
-                if level > 0:
-                    self.error("Line %d - <CODE BEGINS> within a model" % i)
-                    return
-                if in_model is True:
-                    self.error("Line %d - Misplaced <CODE BEGINS> or missing <CODE ENDS>" % i)
-                in_model = True
-                mg = match.groups()
-                # Get the YANG module's file name
-                if mg[2]:
-                    output_file = mg[2].strip()
-                else:
-                    if mg[0] and mg[1] is None:
-                        self.error('Line %d - Missing file name in <CODE BEGINS>' % i)
-                    else:
-                        self.error("Line %d - YANG file not specified in <CODE BEGINS>" % i)
             i += 1
         if level > 0:
             self.error("<End of File> - EOF encountered while parsing the model")
             return
-        if in_model is True:
+        if in_code is True:
             self.error("Line %d - Missing <CODE ENDS>" % i)
 
     def extract_yang_model_xml(self, content):
@@ -823,6 +823,7 @@ if __name__ == "__main__":
                            args.srcdir,
                            args.dstdir,
                            args.strict,
+                           args.strict_name,
                            args.strict_examples,
                            args.debug,
                            args.add_line_refs,
