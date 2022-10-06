@@ -512,7 +512,7 @@ class YangModuleExtractor:
                 output_file = None
                 code_section_start = None
 
-            if "\"" in line:
+            if level != 0 and "\"" in line:
                 if line.count("\"") % 2 == 0:
                     quotes = 0
                 else:
