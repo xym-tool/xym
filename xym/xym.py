@@ -130,19 +130,19 @@ class YangModuleExtractor:
                     return mname + '@' + mrev + ' (belongs-to {})'.format(bt)
 
                 if mname == '':
-                    m = re.search(r'^\s*(sub)?module\s+([\w\-\d]+)', line)
+                    m = re.search(r'''^\s*(sub)?module\s+['"]?([\w\-\d]+)['"]?''', line)
                     if m:
                         mname = m.group(2)
                         continue
 
                 if mrev == '':
-                    m = re.search(r'^\s*revision\s+"?([\d\-]+)"?', line)
+                    m = re.search(r'''^\s*revision\s+['"]?([\d\-]+)['"]?''', line)
                     if m:
                         mrev = m.group(1)
                         continue
 
                 if bt == '':
-                    m = re.search(r'^\s*belongs-to\s+([\w\-\d]+)', line)
+                    m = re.search(r'''^\s*belongs-to\s+['"]?([\w\-\d]+)['"]?''', line)
                     if m:
                         bt = m.group(1)
                         continue
