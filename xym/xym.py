@@ -114,8 +114,11 @@ class YangModuleExtractor:
         self.parse_only_modules = parse_only_modules or []
         self.max_line_len = 0
         self.extracted_models = []
-        self.extract_code_snippets = extract_code_snippets and not URL_PATTERN.match(src_id)
-        self.code_snippets_dir = code_snippets_dir or os.path.join(self.dst_dir, 'code-snippets')
+        self.extract_code_snippets = extract_code_snippets and (not URL_PATTERN.match(src_id) or code_snippets_dir)
+        self.code_snippets_dir = (
+                code_snippets_dir
+                or os.path.join(self.dst_dir, 'code-snippets', os.path.splitext(self.src_id)[0])
+        ) if self.extract_code_snippets else None
         self.code_snippets = []
 
     def warning(self, s):
@@ -669,7 +672,7 @@ class YangModuleExtractor:
                     line = line.rstrip() + lines[j].lstrip()
                     match = self.CODE_BEGINS_TAG.match(line)
 
-                if not output_file and not next_line_is_module_declaration:
+                if self.extract_code_snippets and not output_file and not next_line_is_module_declaration:
                     in_code_snippet = True
                     j = code_section_start
                 # if we ended up with an actual match, update our line counter;
@@ -684,11 +687,10 @@ class YangModuleExtractor:
             self.error("Line %d - Missing <CODE ENDS>" % i)
 
     def write_code_snippets_to_files(self):
+        os.makedirs(self.code_snippets_dir, exist_ok=True)
         for index, code_snippet in enumerate(self.code_snippets):
-            directory = os.path.join(self.code_snippets_dir, os.path.splitext(self.src_id)[0])
-            os.makedirs(directory, exist_ok=True)
             filename = str(index) + '.txt'
-            full_file_path = os.path.join(directory, filename)
+            full_file_path = os.path.join(self.code_snippets_dir, filename)
             with open(full_file_path, 'w') as code_snippet_file:
                 for line in code_snippet:
                     line = line[line.count(' ', 0, 3):]  # removing leading spaces from line
@@ -802,7 +804,7 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examp
                         ye.extract_yang_model_text(sf.read())
         except IOError as ioe:
             print(ioe)
-    if extract_code_snippets:
+    if ye.extract_code_snippets:
         ye.write_code_snippets_to_files()
     return ye.get_extracted_models(force_revision_pyang, force_revision_regexp)
 
@@ -854,6 +856,17 @@ if __name__ == "__main__":
                         help="Optional: if True it will check if file contains correct revision in file name."
                              "If it doesnt it will automatically add the correct revision to the filename using regular"
                              " expression")
+    parser.add_argument("--extract-code-snippets", action="store_true", default=False,
+                        help="Optional: if True all the code snippets from the RFC/draft will be extracted. "
+                             "If the source argument is a URL and this argument is set to True, "
+                             "please be sure that the code-snippets-dir argument is provided, "
+                             "otherwise this value would be overwritten to False.")
+    parser.add_argument("--code-snippets-dir", type=str, default='',
+                        help="Optional: Directory where to store code snippets extracted from the RFC/draft."
+                             "If this argument isn't provided and the source argument isn't a URL, "
+                             "then it will be set to the dstdir + 'code-snippets' + source(without file extension). "
+                             "If this argument isn't provided and the source argument is a URL, "
+                             "then code snippets wouldn't be extracted")
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--parse-only-modules", nargs='+',
@@ -878,7 +891,9 @@ if __name__ == "__main__":
                            args.force_revision_regexp,
                            skip_modules=args.skip_modules,
                            parse_only_modules=args.parse_only_modules,
-                           rfcxml=args.rfcxml
+                           rfcxml=args.rfcxml,
+                           extract_code_snippets=args.extract_code_snippets,
+                           code_snippets_dir=args.code_snippets_dir,
                            )
     if len(extracted_models) > 0:
         if args.strict:
