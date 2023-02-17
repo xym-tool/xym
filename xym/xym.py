@@ -17,19 +17,30 @@ from requests.packages.urllib3 import disable_warnings
 
 from .yangParser import create_context
 
-__author__    = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com, einarnn@gmail.com'
+__author__ = 'jmedved@cisco.com, calle@tail-f.com, bclaise@cisco.com, einarnn@gmail.com'
 __copyright__ = "Copyright(c) 2015, 2016, 2017, 2020 Cisco Systems, Inc."
-__license__   = "New-style BSD"
-__email__     = "einarnn@cisco.com"
-
+__license__ = "New-style BSD"
+__email__ = "einarnn@cisco.com"
 
 if sys.version_info < (2, 7, 9):
     disable_warnings()
 
 try:
     xrange
-except:
+except Exception:
     xrange = range
+
+
+URL_PATTERN = re.compile(
+    r'^(?:http|ftp)s?://'  # http:// or https://
+    r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain
+    r'localhost|'  # localhost...
+    r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+    r'(?::\d+)?'  # optional port
+    r'(?:/?|[/?]\S+)$',
+    re.IGNORECASE
+)
+
 
 def hexdump(src, length=16, sep='.'):
     """
@@ -43,12 +54,12 @@ def hexdump(src, length=16, sep='.'):
     filtr = ''.join([(len(repr(chr(x))) == 3) and chr(x) or sep for x in range(256)])
     lines = []
     for c in xrange(0, len(src), length):
-        chars = src[c:c+length]
+        chars = src[c:c + length]
         hexstring = ' '.join(["%02x" % ord(x) for x in chars])
         if len(hexstring) > 24:
             hexstring = "%s %s" % (hexstring[:24], hexstring[24:])
         printable = ''.join(["%s" % ((ord(x) <= 127 and filtr[ord(x)]) or sep) for x in chars])
-        lines.append("     %02x:  %-*s  |%s|\n" % (c, length*3, hexstring, printable))
+        lines.append("     %02x:  %-*s  |%s|\n" % (c, length * 3, hexstring, printable))
     print(''.join(lines))
 
 
@@ -76,7 +87,8 @@ class YangModuleExtractor:
     EXAMPLE_TAG = re.compile(r'^(example-)')
 
     def __init__(self, src_id, dst_dir, strict=True, strict_examples=True, strict_name=False, add_line_refs=False,
-                 debug_level=0, skip_modules=None, parse_only_modules=None):
+                 debug_level=0, skip_modules=None, parse_only_modules=None, extract_code_snippets=False,
+                 code_snippets_dir=None):
         """
         Initializes class-global variables.
         :param src_id: text string containing the draft or RFC text from which YANG
@@ -98,10 +110,16 @@ class YangModuleExtractor:
         self.strict_name = strict_name
         self.add_line_refs = add_line_refs
         self.debug_level = debug_level
-        self.skip_modules = [] if skip_modules is None else skip_modules 
-        self.parse_only_modules = [] if parse_only_modules is None else parse_only_modules
+        self.skip_modules = skip_modules or []
+        self.parse_only_modules = parse_only_modules or []
         self.max_line_len = 0
         self.extracted_models = []
+        self.extract_code_snippets = extract_code_snippets and (not URL_PATTERN.match(src_id) or code_snippets_dir)
+        self.code_snippets_dir = (
+                code_snippets_dir
+                or os.path.join(self.dst_dir, 'code-snippets', os.path.splitext(self.src_id)[0])
+        ) if self.extract_code_snippets else None
+        self.code_snippets = []
 
     def warning(self, s):
         """
@@ -241,7 +259,9 @@ class YangModuleExtractor:
 
                             # check for model name if correct
                             if real_model_name != existing_model_name:
-                                self.warning('file name ' + existing_model_name + ' does not match model name ' + real_model_name)
+                                self.warning(
+                                    'file name ' + existing_model_name + ' does not match model name ' + real_model_name
+                                )
                                 switch_items = True
 
                             # if any of above are not correct change file
@@ -317,7 +337,7 @@ class YangModuleExtractor:
                 if ncnt == 0:
                     output_model.append(ln)
                 elif self.debug_level > 1:
-                        self.debug_print_strip_msg(ln[1] - 1, ln[0])
+                    self.debug_print_strip_msg(ln[1] - 1, ln[0])
                 ncnt += 1
             else:
                 output_model.append(ln)
@@ -409,7 +429,7 @@ class YangModuleExtractor:
     def strip_empty_lines_backward(self, model, max_lines_to_strip):
         """
         Strips empty lines preceding the line that is currently being parsed. This
-        fucntion is called when the parser encounters a Footer.
+        function is called when the parser encounters a Footer.
         :param model: lines that were added to the model up to this point
         :param line_num: the number of teh line being parsed
         :param max_lines_to_strip: max number of lines to strip from the model
@@ -420,7 +440,7 @@ class YangModuleExtractor:
                 return
             self.debug_print_strip_msg(model[-1][1] - 1, model[-1][0])
             model.pop()
-            
+
     def check_edge_cases(self, example_match, in_code):
         """
         Checks for edge cases and set level to appropriate value.
@@ -448,33 +468,31 @@ class YangModuleExtractor:
         elif self.strict and not self.strict_examples and not in_code:
             return 0
         # enable to parse this module
-        else:
-            return 1
+        return 1
 
     def should_parse_module(self, module_name, output_file):
-            if self.parse_only_modules:
-                if module_name not in self.parse_only_modules and output_file not in self.parse_only_modules:
-                    return False
-            elif self.skip_modules:
-                if module_name in self.skip_modules or output_file in self.skip_modules:
-                    print("\nSkipping '%s'" % module_name)
-                    return False
-            return True
+        if self.parse_only_modules:
+            if module_name not in self.parse_only_modules and output_file not in self.parse_only_modules:
+                return False
+        elif self.skip_modules:
+            if module_name in self.skip_modules or output_file in self.skip_modules:
+                print("\nSkipping '%s'" % module_name)
+                return False
+        return True
 
     def change_output_file_name(self, output_file, module_name):
         ret = output_file
-        if (self.strict_name or not output_file):
+        if self.strict_name or not output_file:
             if output_file:
                 revision = output_file.split('@')[-1].split('.')[0]
-                print("\nrewriting filename from '%s' to '%s@%s.yang'" % (output_file, model_name,
-                                                                        revision))
+                print("\nrewriting filename from '%s' to '%s@%s.yang'" % (output_file, module_name, revision))
                 ret = '{}@{}.yang'.format(module_name, revision)
             else:
                 ret = '%s.yang' % module_name
             if self.debug_level > 0:
                 print('   Getting YANG file name from module name: %s' % ret)
         return ret
-    
+
     def extract_yang_model_text(self, content):
         """
         Extracts one or more YANG models from an RFC or draft text string in
@@ -486,10 +504,11 @@ class YangModuleExtractor:
         :return: None
         """
         model = []
+        current_code_snippet = []
+        in_code_snippet = False
         output_file = None
         in_code = False
         code_section_start = None
-        example_match = False
         i = 0
         level = 0
         quotes = 0
@@ -511,6 +530,10 @@ class YangModuleExtractor:
                 in_code = False
                 output_file = None
                 code_section_start = None
+                if in_code_snippet:
+                    self.code_snippets.append(current_code_snippet.copy())
+                    current_code_snippet.clear()
+                in_code_snippet = False
 
             if level != 0 and "\"" in line:
                 if line.count("\"") % 2 == 0:
@@ -521,9 +544,27 @@ class YangModuleExtractor:
                     else:
                         quotes = 1
 
+            if in_code_snippet and line.strip(' \r\n\t\f') != '':
+                if self.PAGE_TAG.match(line):
+                    i += 1
+                    # Strip empty lines between the Footer and the next page Header
+                    i = self.strip_empty_lines_forward(lines, i)
+                    if i < len(lines):
+                        i += 1  # Strip the next page Header
+                    else:
+                        self.error("<End of File> - EOF encountered while parsing the code snippet")
+                        return
+                    # Strip empty lines between the page Header and real content on the page
+                    i = self.strip_empty_lines_forward(lines, i) - 1
+                    if i >= len(lines):
+                        self.error("<End of File> - EOF encountered while parsing the code snippet")
+                        return
+                else:
+                    current_code_snippet.append(line)
+
             # Try to match '(sub)module <module_name> {'
             match = self.MODULE_STATEMENT.match(line)
-            if match:
+            if not in_code_snippet and match:
                 # We're already parsing a module
                 if level:
                     self.error("Line %d - 'module' statement within another module" % i)
@@ -536,7 +577,7 @@ class YangModuleExtractor:
                 # if we do enforce, we ignore models  not enclosed in <CODE BEGINS> / <CODE ENDS>
                 if match.group(2) or match.group(5):
                     self.warning('Line %d - Module name should not be enclosed in quotes' % i)
-                
+
                 module_name = match.group(3)
 
                 # do the module name checking, etc.
@@ -557,7 +598,7 @@ class YangModuleExtractor:
                     level = self.check_edge_cases(example_match, in_code)
                 else:
                     level = 0
-                
+
                 if level == 1:
                     print("\nExtracting '%s'" % module_name)
                     if quotes == 0:
@@ -570,12 +611,12 @@ class YangModuleExtractor:
                 if self.PAGE_TAG.match(line):
                     self.strip_empty_lines_backward(model, 3)
                     self.debug_print_strip_msg(i, lines[i])
-                    i += 1        # Strip the
+                    i += 1  # Strip the
                     # Strip empty lines between the Footer and the next page Header
                     i = self.strip_empty_lines_forward(lines, i)
                     if i < len(lines):
                         self.debug_print_strip_msg(i, lines[i])
-                        i += 1      # Strip the next page Header
+                        i += 1  # Strip the next page Header
                     else:
                         self.error("<End of File> - EOF encountered while parsing the model")
                         return
@@ -603,6 +644,7 @@ class YangModuleExtractor:
             # Try to match '<CODE BEGINS>'
             match = self.CODE_BEGINS_TAG.match(line)
             if match:
+                next_line_is_module_declaration = False
                 code_section_start = i
                 if in_code:
                     self.error("Line %d - Misplaced <CODE BEGINS> or missing <CODE ENDS>" % i)
@@ -611,19 +653,18 @@ class YangModuleExtractor:
                     return
                 in_code = True
                 j = i
-                # If we matched 'CODE BEGINS', but not the file name, look on
-                # following lines for a complete match
+                # If we matched 'CODE BEGINS', but not the file name, look on following lines for a complete match
                 while match:
                     if match.group(2):
                         output_file = match.group(2).strip('"')
                         break
-                    if match.group(3):
+                    if match.group(3) and match.group(3).endswith('.yang'):
                         # this is our best guess at whether we have the whole file name if it was unquoted
-                        if match.group(3).endswith('.yang'):
-                            self.warning("Line %d - Unquoted file name in <CODE BEINGS>" % i)
-                            output_file = match.group(3)
-                            break
-                    if self.MODULE_STATEMENT.match(lines[j + 1]):
+                        self.warning("Line %d - Unquoted file name in <CODE BEINGS>" % i)
+                        output_file = match.group(3)
+                        break
+                    next_line_is_module_declaration = self.MODULE_STATEMENT.match(lines[j + 1])
+                    if next_line_is_module_declaration:
                         break
                     j += 1
                     if j >= len(lines):
@@ -631,10 +672,12 @@ class YangModuleExtractor:
                     line = line.rstrip() + lines[j].lstrip()
                     match = self.CODE_BEGINS_TAG.match(line)
 
-                    
-                # if we ended up with an actual match, update our line
-                # counter; otherwise forget the scan for the file name
-                if match and output_file:
+                if self.extract_code_snippets and not output_file and not next_line_is_module_declaration:
+                    in_code_snippet = True
+                    j = code_section_start
+                # if we ended up with an actual match, update our line counter;
+                # otherwise forget the scan for the file name/code snippet
+                if (match and output_file) or in_code_snippet:
                     i = j
             i += 1
         if level > 0:
@@ -642,6 +685,16 @@ class YangModuleExtractor:
             return
         if in_code is True:
             self.error("Line %d - Missing <CODE ENDS>" % i)
+
+    def write_code_snippets_to_files(self):
+        os.makedirs(self.code_snippets_dir, exist_ok=True)
+        for index, code_snippet in enumerate(self.code_snippets):
+            filename = str(index) + '.txt'
+            full_file_path = os.path.join(self.code_snippets_dir, filename)
+            with open(full_file_path, 'w') as code_snippet_file:
+                for line in code_snippet:
+                    line = line[line.count(' ', 0, 3):]  # removing leading spaces from line
+                    code_snippet_file.write(line)
 
     def extract_yang_model_xml(self, content):
         root = ET.fromstring(content)
@@ -684,12 +737,10 @@ class YangModuleExtractor:
             output_file = self.change_output_file_name(output_file, module_name)
             self.write_model_to_file([[line, -1] for line in lines], output_file)
 
-            
-
 
 def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examples=False, debug_level=0,
         add_line_refs=False, force_revision_pyang=False, force_revision_regexp=False, skip_modules=None,
-        parse_only_modules=None, rfcxml=False):
+        parse_only_modules=None, rfcxml=False, extract_code_snippets=False, code_snippets_dir=None):
     """
     Extracts YANG model from an IETF RFC or draft text file.
     This is the main (external) API entry for the module.
@@ -709,7 +760,9 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examp
     :param force_revision_pyang: Whether it should create a <filename>@<revision>.yang even on error using pyang
     :param skip_modules: it will skip modules in this list
     :param parse_only_modules: it will parse only modules in this list
-    "param rfcxml: Whether the input file is in RFCXMLv3 format
+    :param rfcxml: Whether the input file is in RFCXMLv3 format
+    :param extract_code_snippets: If True then code examples from the draft will be extracted as well
+    :param code_snippets_dir: Directory where to store code snippets
     :return: None
     """
 
@@ -717,17 +770,11 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examp
         print('Can not use both methods for parsing name and revision - using regular expression method only')
         force_revision_pyang = False
 
-    url = re.compile(r'^(?:http|ftp)s?://'  # http:// or https://
-                     r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain
-                     r'localhost|'  # localhost...
-                     r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
-                     r'(?::\d+)?'  # optional port
-                     r'(?:/?|[/?]\S+)$', re.IGNORECASE)
     rqst_hdrs = {'Accept': 'text/plain', 'Accept-Charset': 'utf-8'}
 
-    ye = YangModuleExtractor(source_id, dstdir, strict, strict_examples, strict_name, add_line_refs, debug_level, 
-                             skip_modules, parse_only_modules)
-    is_url = url.match(source_id)
+    ye = YangModuleExtractor(source_id, dstdir, strict, strict_examples, strict_name, add_line_refs, debug_level,
+                             skip_modules, parse_only_modules, extract_code_snippets, code_snippets_dir)
+    is_url = URL_PATTERN.match(source_id)
     if is_url:
         r = requests.get(source_id, headers=rqst_hdrs)
         if r.status_code == 200:
@@ -757,6 +804,8 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examp
                         ye.extract_yang_model_text(sf.read())
         except IOError as ioe:
             print(ioe)
+    if ye.extract_code_snippets:
+        ye.write_code_snippets_to_files()
     return ye.get_extracted_models(force_revision_pyang, force_revision_regexp)
 
 
@@ -765,7 +814,7 @@ if __name__ == "__main__":
     Command line utility / test
     """
     parser = argparse.ArgumentParser(description="Extracts one or more YANG "
-                                     "models from an IETF RFC/draft text file")
+                                                 "models from an IETF RFC/draft text file")
     parser.add_argument("source",
                         help="The URL or file name of the RFC/draft text from "
                              "which to get the model")
@@ -807,6 +856,17 @@ if __name__ == "__main__":
                         help="Optional: if True it will check if file contains correct revision in file name."
                              "If it doesnt it will automatically add the correct revision to the filename using regular"
                              " expression")
+    parser.add_argument("--extract-code-snippets", action="store_true", default=False,
+                        help="Optional: if True all the code snippets from the RFC/draft will be extracted. "
+                             "If the source argument is a URL and this argument is set to True, "
+                             "please be sure that the code-snippets-dir argument is provided, "
+                             "otherwise this value would be overwritten to False.")
+    parser.add_argument("--code-snippets-dir", type=str, default='',
+                        help="Optional: Directory where to store code snippets extracted from the RFC/draft."
+                             "If this argument isn't provided and the source argument isn't a URL, "
+                             "then it will be set to the dstdir + 'code-snippets' + source(without file extension). "
+                             "If this argument isn't provided and the source argument is a URL, "
+                             "then code snippets wouldn't be extracted")
     group = parser.add_mutually_exclusive_group()
     group.add_argument(
         "--parse-only-modules", nargs='+',
@@ -816,7 +876,7 @@ if __name__ == "__main__":
         "--skip-modules", nargs='+',
         help="Optional: it will skip modules added in the list in arguments."
     )
-    
+
     args = parser.parse_args()
 
     extracted_models = xym(args.source,
@@ -831,8 +891,10 @@ if __name__ == "__main__":
                            args.force_revision_regexp,
                            skip_modules=args.skip_modules,
                            parse_only_modules=args.parse_only_modules,
-                           rfcxml=args.rfcxml
-    )
+                           rfcxml=args.rfcxml,
+                           extract_code_snippets=args.extract_code_snippets,
+                           code_snippets_dir=args.code_snippets_dir,
+                           )
     if len(extracted_models) > 0:
         if args.strict:
             print("\nCreated the following models that conform to the strict guidelines::")

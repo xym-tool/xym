@@ -4,9 +4,10 @@ from xym import xym
 from xym import __version__
 import re
 
+
 def run():
     parser = argparse.ArgumentParser(description='Extracts one or more YANG'
-                                     'models from an IETF RFC or draft text file')
+                                                 'models from an IETF RFC or draft text file')
     parser.add_argument(
         "source",
         help="The URL or file name of the RFC/draft text from which to get the model")
@@ -22,8 +23,8 @@ def run():
     parser.add_argument(
         "--strict", type=bool, default=False,
         help='Optional flag that determines syntax enforcement; '
-        "'If set to 'True', the <CODE BEGINS> / <CODE ENDS> "
-        "tags are required; default is 'False'")
+             "'If set to 'True', the <CODE BEGINS> / <CODE ENDS> "
+             "tags are required; default is 'False'")
     parser.add_argument(
         "--strict-name", action='store_true', default=False,
         help="Optional flag that determines name enforcement; "
@@ -39,16 +40,27 @@ def run():
     parser.add_argument(
         "--debug", type=int, default=0,
         help="Optional: debug level - determines the amount of debug "
-        "info printed to console; default is 0 (no debug info printed)")
+             "info printed to console; default is 0 (no debug info printed)")
     parser.add_argument(
         "--force-revision-pyang", action='store_true', default=False,
         help="Optional: if True it will check if file contains correct revision in file name."
-        "If it doesnt it will automatically add the correct revision to the filename using pyang")
+             "If it doesnt it will automatically add the correct revision to the filename using pyang")
     parser.add_argument(
         "--force-revision-regexp", action='store_true', default=False,
         help="Optional: if True it will check if file contains correct revision in file name."
-        "If it doesnt it will automatically add the correct revision to the filename using regular"
-        " expression")
+             "If it doesnt it will automatically add the correct revision to the filename using regular"
+             " expression")
+    parser.add_argument("--extract-code-snippets", action="store_true", default=False,
+                        help="Optional: if True all the code snippets from the RFC/draft will be extracted. "
+                             "If the source argument is a URL and this argument is set to True, "
+                             "please be sure that the code-snippets-dir argument is provided, "
+                             "otherwise this value would be overwritten to False.")
+    parser.add_argument("--code-snippets-dir", type=str, default='',
+                        help="Optional: Directory where to store code snippets extracted from the RFC/draft."
+                             "If this argument isn't provided and the source argument isn't a URL, "
+                             "then it will be set to the dstdir + 'code-snippets' + source(without file extension). "
+                             "If this argument isn't provided and the source argument is a URL, "
+                             "then code snippets wouldn't be extracted")
     parser.add_argument(
         "--version", action='version',
         version='%(prog)s {version}'.format(version=__version__))
@@ -75,7 +87,9 @@ def run():
                                force_revision_regexp=args.force_revision_regexp,
                                skip_modules=args.skip_modules,
                                parse_only_modules=args.parse_only_modules,
-                               rfcxml=args.rfcxml)
+                               rfcxml=args.rfcxml,
+                               extract_code_snippets=args.extract_code_snippets,
+                               code_snippets_dir=args.code_snippets_dir)
     if len(extracted_models) > 0:
         if args.strict:
             print("Created the following models that conform to the strict guidelines:")
@@ -93,16 +107,15 @@ def run():
                 r'(?:/?|[/?]\S+)$', re.IGNORECASE)
             fqfn = args.dstdir + '/yang.dict'
             is_url = url.match(args.source)
-            draft_file = ""
             if is_url:
                 draft_file = args.source.rsplit('/', 1)[1]
             else:
                 draft_file = args.source
             draft_name = draft_file.split('.', 1)[0]
             if draft_name.startswith("draft"):
-                                draft_email = draft_name.rsplit('-', 1)[0] + "@ietf.org"
+                draft_email = draft_name.rsplit('-', 1)[0] + "@ietf.org"
             else:
-                                draft_email = draft_name + "@ietf.org"
+                draft_email = draft_name + "@ietf.org"
             with open(fqfn, "a") as of:
                 for em in extracted_models:
                     of.write('%s : %s\n' % (em.split('@', 1)[0], draft_email))
