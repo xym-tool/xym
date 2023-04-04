@@ -687,6 +687,8 @@ class YangModuleExtractor:
             self.error("Line %d - Missing <CODE ENDS>" % i)
 
     def write_code_snippets_to_files(self):
+        if not self.code_snippets:
+            return
         os.makedirs(self.code_snippets_dir, exist_ok=True)
         for index, code_snippet in enumerate(self.code_snippets):
             filename = str(index) + '.txt'
