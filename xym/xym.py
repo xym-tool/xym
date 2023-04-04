@@ -564,9 +564,9 @@ class YangModuleExtractor:
 
             # Try to match '(sub)module <module_name> {'
             match = self.MODULE_STATEMENT.match(line)
-            if not in_code_snippet and match:
+            if not in_code_snippet and match and quotes == 0:
                 # We're already parsing a module
-                if level:
+                if level > 0:
                     self.error("Line %d - 'module' statement within another module" % i)
                     return
 
