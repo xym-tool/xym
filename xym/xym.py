@@ -300,10 +300,7 @@ class YangModuleExtractor:
                 if line_len > self.max_line_len:
                     self.max_line_len = line_len
             else:
-                if len(mline) > 1:
-                    output_model.append(["\n", mline[1]])
-                else:
-                    output_model.append(["\n"])
+                output_model.append(['\n', mline[1]])
         return output_model
 
     def add_line_references(self, input_model):
