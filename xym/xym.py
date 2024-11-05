@@ -725,6 +725,7 @@ class YangModuleExtractor:
                     )
                     continue
 
+                # If the regex doesn't match, then attempt to extract the module as text.
                 self.extract_yang_model_text(sourcecode.text)
                 continue
             output_file = sourcecode.get('name')
