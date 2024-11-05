@@ -300,7 +300,10 @@ class YangModuleExtractor:
                 if line_len > self.max_line_len:
                     self.max_line_len = line_len
             else:
-                output_model.append(['\n', mline[1]])
+                if len(mline) > 1:
+                    output_model.append(["\n", mline[1]])
+                else:
+                    output_model.append(["\n"])
         return output_model
 
     def add_line_references(self, input_model):
@@ -454,7 +457,7 @@ class YangModuleExtractor:
             if self.parse_only_modules:
                 self.warning("Unable to parse not example module in strict-example mode")
             return 0
-        # skip all example modules in <CODE BEGINS> section in strict-example mode 
+        # skip all example modules in <CODE BEGINS> section in strict-example mode
         elif self.strict_examples and example_match and in_code:
             if self.parse_only_modules:
                 self.warning("Unable to parse example module in <CODE BEGINS> section in strict-example mode")
@@ -700,14 +703,32 @@ class YangModuleExtractor:
 
     def extract_yang_model_xml(self, content):
         root = ET.fromstring(content)
-        for sourcecode in root.iter('sourcecode'):
-            if sourcecode.get('type') != 'yang':
-                continue
+        for sourcecode in root.iter("sourcecode"):
             if not sourcecode.text:
+                continue
+            if sourcecode.get("type") != "yang" and not re.search(
+                r"[<]CODE BEGINS[>] file .+\.yang", sourcecode.text
+            ):
                 continue
             lines = sourcecode.text.splitlines(True)
             if '<CODE BEGINS>' in sourcecode.text:
-                self.extract_yang_model_text(lines)
+                # First try and just get the text.
+                matches = re.search(
+                    r"""<CODE BEGINS> file "(([^@]+)@.+)"\n(.+)\n<CODE ENDS>""",
+                    sourcecode.text,
+                    re.M | re.DOTALL,
+                )
+                if matches:
+                    print("\nExtracting '%s'" % matches[2])
+
+                    output_file = self.change_output_file_name(matches[1], matches[2])
+                    self.write_model_to_file(
+                        [[line, -1] for line in matches[3].splitlines(True)],
+                        output_file,
+                    )
+                    continue
+
+                self.extract_yang_model_text(sourcecode.text)
                 continue
             output_file = sourcecode.get('name')
             match = None
