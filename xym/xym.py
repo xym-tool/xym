@@ -7,7 +7,7 @@ import os
 import os.path
 import re
 import sys
-import xml.etree.ElementTree as ET
+from lxml import etree as ET
 from collections import Counter
 
 import requests
@@ -699,7 +699,10 @@ class YangModuleExtractor:
                     code_snippet_file.write(line)
 
     def extract_yang_model_xml(self, content):
-        root = ET.fromstring(content)
+        doc_parser = ET.XMLParser(
+            resolve_entities=False, recover=True, ns_clean=True, encoding="utf-8"
+        )
+        root = ET.fromstring(content.encode("utf-8"), doc_parser)
         for sourcecode in root.iter("sourcecode"):
             if not sourcecode.text:
                 continue
