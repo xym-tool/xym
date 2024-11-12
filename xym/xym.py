@@ -711,7 +711,7 @@ class YangModuleExtractor:
             if '<CODE BEGINS>' in sourcecode.text:
                 # First try and just get the text.
                 matches = re.search(
-                    r"""<CODE BEGINS> file "(([^@]+)@.+)"\n(.+)\n<CODE ENDS>""",
+                    r"""<CODE BEGINS> file "(([^@]+)@[^"]+)"\n(.+)\n<CODE ENDS>""",
                     sourcecode.text,
                     re.M | re.DOTALL,
                 )
