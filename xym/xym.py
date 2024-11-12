@@ -729,6 +729,9 @@ class YangModuleExtractor:
                 self.extract_yang_model_text(sourcecode.text)
                 continue
             output_file = sourcecode.get('name')
+            if not output_file or output_file == "":
+                continue
+
             match = None
             i = 0
             for i, line in enumerate(lines):
