@@ -740,7 +740,8 @@ class YangModuleExtractor:
                 match = self.MODULE_STATEMENT.match(line)
             if match is None:
                 continue
-            lines = lines[i:]
+            mstart = i - 1
+            lines = lines[mstart:]
             if not output_file:
                 self.warning('Missing file name in <sourcecode>')
             if match.group(2) or match.group(5):
@@ -842,8 +843,12 @@ if __name__ == "__main__":
     parser.add_argument("source",
                         help="The URL or file name of the RFC/draft text from "
                              "which to get the model")
-    parser.add_argument("--rfcxml", action='store_ture', default=False,
-                        help="Parse a file in RFCXMLv3 format")
+    parser.add_argument(
+        "--rfcxml",
+        action="store_true",
+        default=False,
+        help="Parse a file in RFCXMLv3 format",
+    )
     parser.add_argument("--srcdir", default='.',
                         help="Optional: directory where to find the source "
                              "text; default is './'")
