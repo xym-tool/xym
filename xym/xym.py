@@ -711,7 +711,7 @@ class YangModuleExtractor:
             ):
                 continue
             lines = sourcecode.text.splitlines(True)
-            if '<CODE BEGINS>' in sourcecode.text:
+            if "<CODE BEGINS>" in sourcecode.text and not self.strict_examples:
                 # First try and just get the text.
                 matches = re.search(
                     r"""<CODE BEGINS> file "(([^@]+)@[^"]+)"\n(.+)\n<CODE ENDS>""",
@@ -733,8 +733,15 @@ class YangModuleExtractor:
                 continue
             output_file = sourcecode.get('name')
             markers = sourcecode.get("markers")
-            if markers and markers.lower() == "false":
-                continue
+            # If we should only extract examples, then check if the code
+            # markers are NOT present.
+            if markers:
+                if self.strict_examples:
+                    if markers.lower() == "true":
+                        continue
+                else:
+                    if markers.lower() == "false":
+                        continue
             match = None
             i = 0
             for i, line in enumerate(lines):
