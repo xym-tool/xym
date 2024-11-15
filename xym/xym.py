@@ -732,6 +732,9 @@ class YangModuleExtractor:
                 self.extract_yang_model_text(sourcecode.text)
                 continue
             output_file = sourcecode.get('name')
+            markers = sourcecode.get("markers")
+            if markers and markers.lower() == "false":
+                continue
             match = None
             i = 0
             for i, line in enumerate(lines):
