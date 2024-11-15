@@ -61,6 +61,12 @@ def run():
                              "then it will be set to the dstdir + 'code-snippets' + source(without file extension). "
                              "If this argument isn't provided and the source argument is a URL, "
                              "then code snippets wouldn't be extracted")
+    parser.add_argument("--add-line-refs", action='store_true', default=False,
+                        help="Optional: if present, comments are added to each "
+                             "line in the extracted YANG module that contain "
+                             "the reference to the line number in the "
+                             "original RFC/Draft text file from which the "
+                             "line was extracted.")
     parser.add_argument(
         "--version", action='version',
         version='%(prog)s {version}'.format(version=__version__))
@@ -89,7 +95,8 @@ def run():
                                parse_only_modules=args.parse_only_modules,
                                rfcxml=args.rfcxml,
                                extract_code_snippets=args.extract_code_snippets,
-                               code_snippets_dir=args.code_snippets_dir)
+                               code_snippets_dir=args.code_snippets_dir
+                               add_line_refs=args.add_line_refs)
     if len(extracted_models) > 0:
         if args.strict:
             print("Created the following models that conform to the strict guidelines:")
