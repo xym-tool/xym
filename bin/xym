@@ -95,8 +95,9 @@ def run():
                                parse_only_modules=args.parse_only_modules,
                                rfcxml=args.rfcxml,
                                extract_code_snippets=args.extract_code_snippets,
-                               code_snippets_dir=args.code_snippets_dir
-                               add_line_refs=args.add_line_refs)
+                               code_snippets_dir=args.code_snippets_dir,
+                               add_line_refs=args.add_line_refs,
+                               )
     if len(extracted_models) > 0:
         if args.strict:
             print("Created the following models that conform to the strict guidelines:")
