@@ -733,15 +733,16 @@ class YangModuleExtractor:
                 continue
             output_file = sourcecode.get('name')
             markers = sourcecode.get("markers")
+            if not markers:
+                markers = "false"
             # If we should only extract examples, then check if the code
             # markers are NOT present.
-            if markers:
-                if self.strict_examples:
-                    if markers.lower() == "true":
-                        continue
-                else:
-                    if markers.lower() == "false":
-                        continue
+            if self.strict_examples:
+                if markers.lower() == "true":
+                    continue
+            else:
+                if markers.lower() == "false":
+                    continue
             match = None
             i = 0
             for i, line in enumerate(lines):
