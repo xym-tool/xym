@@ -698,6 +698,30 @@ class YangModuleExtractor:
                     line = line[line.count(' ', 0, 3):]  # removing leading spaces from line
                     code_snippet_file.write(line)
 
+    def should_parse_xml(self, sourcecode):
+        # Do some checks to see if we should parse this block of source code.
+        sctype = sourcecode.get("type")
+        markers = sourcecode.get("markers")
+        if not markers:
+            markers = "false"
+        if not sctype:
+            # If the sourcecode block doesn't have any type, then check if there
+            # is a strict YANG module in it.  This may be older XML.
+            if re.search(r"[<]CODE BEGINS[>] file .+\.yang", sourcecode.text):
+                return True
+
+        elif sctype.lower() == "yang":
+            # If the type is explicitly set, and it's "yang", then
+            # check to see if it will render with strict markers.
+            if self.strict_examples and markers.lower() == "false":
+                return True
+
+            if not self.strict_examples and markers.lower() == "true":
+                return True
+
+        # Else this is not for us.
+        return False
+
     def extract_yang_model_xml(self, content):
         doc_parser = ET.XMLParser(
             resolve_entities=False, recover=True, ns_clean=True, encoding="utf-8"
@@ -706,12 +730,12 @@ class YangModuleExtractor:
         for sourcecode in root.iter("sourcecode"):
             if not sourcecode.text:
                 continue
-            if sourcecode.get("type") != "yang" and not re.search(
-                r"[<]CODE BEGINS[>] file .+\.yang", sourcecode.text
-            ):
+
+            if not self.should_parse_xml(sourcecode):
                 continue
+
             lines = sourcecode.text.splitlines(True)
-            if "<CODE BEGINS>" in sourcecode.text and not self.strict_examples:
+            if "<CODE BEGINS>" in sourcecode.text:
                 # First try and just get the text.
                 matches = re.search(
                     r"""<CODE BEGINS> file "(([^@]+)@[^"]+)"\n(.+)\n<CODE ENDS>""",
@@ -731,18 +755,7 @@ class YangModuleExtractor:
                 # If the regex doesn't match, then attempt to extract the module as text.
                 self.extract_yang_model_text(sourcecode.text)
                 continue
-            output_file = sourcecode.get('name')
-            markers = sourcecode.get("markers")
-            if not markers:
-                markers = "false"
-            # If we should only extract examples, then check if the code
-            # markers are NOT present.
-            if self.strict_examples:
-                if markers.lower() == "true":
-                    continue
-            else:
-                if markers.lower() == "false":
-                    continue
+            output_file = sourcecode.get("name")
             match = None
             i = 0
             for i, line in enumerate(lines):
