@@ -7,6 +7,7 @@ import os
 import os.path
 import re
 import sys
+from shutil import copy2
 from lxml import etree as ET
 from collections import Counter
 
@@ -137,15 +138,18 @@ class YangModuleExtractor:
         """
         print("   ERROR: '%s', %s" % (self.src_id, s), file=sys.stderr)
 
-    def get_mod_rev(self, module):
+    def get_mod_rev(self, module, extract_semver=False):
         mname = ''
         mrev = ''
         bt = ''
+        mver = ''
 
         with open(module, 'r') as ym:
             for line in ym:
-                if mname != '' and mrev != '' and bt != '':
-                    return mname + '@' + mrev + ' (belongs-to {})'.format(bt)
+                if mname != '' and mrev != '' and bt != '' and (mver != '' or not extract_semver):
+                    return (
+                        mname + '@' + mrev + mver + ' (belongs-to {})'.format(bt)
+                    )
 
                 if mname == '':
                     m = re.search(r'''^\s*(sub)?module\s+['"]?([\w\-\d]+)['"]?''', line)
@@ -165,14 +169,23 @@ class YangModuleExtractor:
                         bt = m.group(1)
                         continue
 
+                if extract_semver and mver == '' and mrev != '':
+                    m = re.search(
+                        r'''^\s*\w+:version\s+['"]?([0-9]+[.][0-9]+[.][0-9]+(_(non_)?compatible)?(-[A-Za-z0-9.-]+[.-][0-9]+)?([+][A-Za-z0-9.-]+)?)['"]?''',
+                        line,
+                    )
+                    if m:
+                        mver = '#' + m.group(1).rstrip()
+                        continue
+
         if mrev is not None and mrev.rstrip() != '':
             mrev = '@' + mrev
         if bt != '':
-            return mname + mrev + ' (belongs-to {})'.format(bt)
+            return mname + mrev + mver + ' (belongs-to {})'.format(bt)
 
-        return mname + mrev
+        return mname + mrev + mver
 
-    def get_extracted_models(self, force_revision_pyang, force_revision_regexp):
+    def get_extracted_models(self, force_revision_pyang, force_revision_regexp, extract_semver, semver_symlink):
         if force_revision_pyang or force_revision_regexp:
             models = []
             models.extend(self.extracted_models)
@@ -270,12 +283,35 @@ class YangModuleExtractor:
                         else:
                             self.warning(real_model_name + ' revision not specified in file name')
                             self.change_model_name(model, real_model_name_revision + '.yang')
+        if extract_semver:
+            models = []
+            models.extend(self.extracted_models)
+            for model in models:
+                out = self.get_mod_rev(self.dst_dir + '/' + model, True)
+                real_model_name_revision = out.rstrip()
+                real_model_name_semver = ''
+                if real_model_name_revision != '':
+                    if '#' in real_model_name_revision:
+                        (real_model_name_revision, real_model_semver) = real_model_name_revision.split('#')
+                        if ' ' in real_model_semver:
+                            real_model_semver = real_model_semver.split(' ')[0]
+                        real_model_semver = '#' + real_model_semver
+                        real_model_name = real_model_name_revision.split('@')[0]
+                        real_model_name_semver = real_model_name + real_model_semver + '.yang'
+                        self.copy_to_semver(model, real_model_name_semver, semver_symlink)
         return self.extracted_models
 
     def change_model_name(self, old_model_name, new_model_name):
         self.extracted_models.remove(old_model_name)
         self.extracted_models.append(new_model_name)
         os.rename(self.dst_dir + '/' + old_model_name, self.dst_dir + '/' + new_model_name)
+
+    def copy_to_semver(self, model_name, semver_name, semver_symlink):
+        self.extracted_models.append(semver_name)
+        if semver_symlink:
+            os.symlink(self.dst_dir + '/' + model_name, self.dst_dir + '/' + semver_name)
+        else:
+            copy2(self.dst_dir + '/' + model_name, self.dst_dir + '/' + semver_name)
 
     def remove_leading_spaces(self, input_model):
         """
@@ -788,8 +824,9 @@ class YangModuleExtractor:
 
 
 def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examples=False, debug_level=0,
-        add_line_refs=False, force_revision_pyang=False, force_revision_regexp=False, skip_modules=None,
-        parse_only_modules=None, rfcxml=False, extract_code_snippets=False, code_snippets_dir=None):
+        add_line_refs=False, force_revision_pyang=False, force_revision_regexp=False, extract_semver=False,
+        semver_symlink=False, skip_modules=None, parse_only_modules=None, rfcxml=False, extract_code_snippets=False,
+        code_snippets_dir=None):
     """
     Extracts YANG model from an IETF RFC or draft text file.
     This is the main (external) API entry for the module.
@@ -807,6 +844,8 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examp
     :param debug_level: Determines how much debug output is printed to the console
     :param force_revision_regexp: Whether it should create a <filename>@<revision>.yang even on error using regexp
     :param force_revision_pyang: Whether it should create a <filename>@<revision>.yang even on error using pyang
+    :param extract_semver: Whether to create a <module>@<semver>.yang copy of the extracted module
+    :param semver_symlink: Whether to create a symlink for the <module>@<semver>.yang file instead of a copy
     :param skip_modules: it will skip modules in this list
     :param parse_only_modules: it will parse only modules in this list
     :param rfcxml: Whether the input file is in RFCXMLv3 format
@@ -855,7 +894,7 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examp
             print(ioe)
     if ye.extract_code_snippets:
         ye.write_code_snippets_to_files()
-    return ye.get_extracted_models(force_revision_pyang, force_revision_regexp)
+    return ye.get_extracted_models(force_revision_pyang, force_revision_regexp, extract_semver, semver_symlink)
 
 
 if __name__ == "__main__":
@@ -909,6 +948,12 @@ if __name__ == "__main__":
                         help="Optional: if True it will check if file contains correct revision in file name."
                              "If it doesnt it will automatically add the correct revision to the filename using regular"
                              " expression")
+    parser.add_argument("--extract-semver", action='store_true', default=False,
+                        help="Optional: if True it will extract the YANG Semver information from the YANG module and"
+                        "create a copy of the module as <module>#<semver>.yang.")
+    parser.add_argument("--semver-symlink", action='store_true', default=False,
+                        help="Optional: if True it will create a symlink of the YANG Semver version of the module rather "
+                        "than a copy.  This requires --extract-semver")
     parser.add_argument("--extract-code-snippets", action="store_true", default=False,
                         help="Optional: if True all the code snippets from the RFC/draft will be extracted. "
                              "If the source argument is a URL and this argument is set to True, "
@@ -942,6 +987,8 @@ if __name__ == "__main__":
                            args.add_line_refs,
                            args.force_revision_pyang,
                            args.force_revision_regexp,
+                           args.extract_semver,
+                           args.semver_symlink,
                            skip_modules=args.skip_modules,
                            parse_only_modules=args.parse_only_modules,
                            rfcxml=args.rfcxml,
