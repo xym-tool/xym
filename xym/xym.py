@@ -146,10 +146,14 @@ class YangModuleExtractor:
 
         with open(module, 'r') as ym:
             for line in ym:
-                if mname != '' and mrev != '' and bt != '' and (mver != '' or not extract_semver):
-                    return (
-                        mname + '@' + mrev + mver + ' (belongs-to {})'.format(bt)
-                    )
+                # If module name, revision, and belongs-to are all found,
+                # and either semver is present or semver extraction is not requested,
+                # return the formatted string with all info.
+                if mname != '' and mrev != '' and bt != '':
+                    if mver != '' or not extract_semver:
+                        return (
+                            mname + '@' + mrev + mver + ' (belongs-to {})'.format(bt)
+                        )
 
                 if mname == '':
                     m = re.search(r'''^\s*(sub)?module\s+['"]?([\w\-\d]+)['"]?''', line)
