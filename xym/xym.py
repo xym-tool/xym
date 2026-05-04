@@ -144,7 +144,7 @@ class YangModuleExtractor:
         bt = ''
         mver = ''
 
-        with open(module, 'r', encondig='utf-8') as ym:
+        with open(module, 'r', encoding='utf-8') as ym:
             for line in ym:
                 # If module name, revision, and belongs-to are all found,
                 # and either semver is present or semver extraction is not requested,
