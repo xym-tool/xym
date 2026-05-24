@@ -1,5 +1,0 @@
-include README.md
-include test/test*.txt
-include requirements.txt
-include versioneer.py
-include xym/_version.py
