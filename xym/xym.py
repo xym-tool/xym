@@ -144,7 +144,7 @@ class YangModuleExtractor:
         bt = ''
         mver = ''
 
-        with open(module, 'r') as ym:
+        with open(module, 'r', encoding='utf-8') as ym:
             for line in ym:
                 # If module name, revision, and belongs-to are all found,
                 # and either semver is present or semver extraction is not requested,
@@ -417,7 +417,7 @@ class YangModuleExtractor:
             if os.path.isfile(fqfn):
                 self.error("File '%s' exists" % fqfn)
                 return
-            with open(fqfn, 'w') as of:
+            with open(fqfn, 'w', encoding='utf-8') as of:
                 of.write(output)
                 of.close()
                 self.extracted_models.append(fn)
@@ -733,7 +733,7 @@ class YangModuleExtractor:
         for index, code_snippet in enumerate(self.code_snippets):
             filename = str(index) + '.txt'
             full_file_path = os.path.join(self.code_snippets_dir, filename)
-            with open(full_file_path, 'w') as code_snippet_file:
+            with open(full_file_path, 'w', encoding='utf-8') as code_snippet_file:
                 for line in code_snippet:
                     line = line[line.count(' ', 0, 3):]  # removing leading spaces from line
                     code_snippet_file.write(line)
@@ -883,7 +883,7 @@ def xym(source_id, srcdir, dstdir, strict=False, strict_name=False, strict_examp
     else:
         try:
             if sys.version_info >= (3, 4):
-                with open(os.path.join(srcdir, source_id), encoding='latin-1', errors='ignore') as sf:
+                with open(os.path.join(srcdir, source_id), encoding='utf-8', errors='ignore') as sf:
                     if rfcxml:
                         ye.extract_yang_model_xml(sf.read())
                     else:
