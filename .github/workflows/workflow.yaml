@@ -1,0 +1,89 @@
+name: CI and publish
+
+on:
+  pull_request:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Test Python ${{ matrix.python-version }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version:
+          - "3.10"
+          - "3.11"
+          - "3.12"
+          - "3.13"
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install package
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .
+
+      - name: Run tests
+        run: |
+          cd test
+          python -m unittest test
+
+  publish:
+    name: Publish wheel to PyPI
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Validate release tag
+        id: release_tag
+        shell: bash
+        run: |
+          if [[ "${GITHUB_REF_NAME}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(rc[0-9]+)?$ ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            echo "Tag '${GITHUB_REF_NAME}' does not match the PyPI release pattern; skipping publish."
+          fi
+
+      - name: Check out repository
+        if: steps.release_tag.outputs.publish == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        if: steps.release_tag.outputs.publish == 'true'
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Build wheel
+        if: steps.release_tag.outputs.publish == 'true'
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build --wheel
+
+      - name: Publish wheel
+        if: steps.release_tag.outputs.publish == 'true'
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist/
