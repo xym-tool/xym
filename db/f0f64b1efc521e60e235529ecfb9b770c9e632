@@ -1,0 +1,20 @@
+.github/workflows/workflow.yaml
+  s_8c28661e37d688::t_ccfb45a4d20e92 56,67,73,80,86
+  s_8c28661e37d688::t_db3e4c44e954ef 1-55,57-66,68-72,74-79,81-85,87-89
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "dbf0f64b1efc521e60e235529ecfb9b770c9e632",
+  "prompts": {},
+  "sessions": {
+    "s_8c28661e37d688": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e5bc6-c8b1-7c73-a558-78850375cd59",
+        "model": "gpt-5.5"
+      },
+      "human_author": "Einar Nilsen-Nygaard <einarnn@cisco.com>"
+    }
+  }
+}
