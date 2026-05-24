@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 import argparse
-from xym import xym
-from xym import __version__
 import re
+
+from . import __version__
+from .xym import xym
 
 
 def run():
@@ -88,24 +89,24 @@ def run():
 
     args = parser.parse_args()
 
-    extracted_models = xym.xym(args.source,
-                               args.srcdir,
-                               args.dstdir,
-                               args.strict,
-                               args.strict_name,
-                               args.strict_examples,
-                               args.debug,
-                               force_revision_pyang=args.force_revision_pyang,
-                               force_revision_regexp=args.force_revision_regexp,
-                               extract_semver=args.extract_semver,
-                               semver_symlink=args.semver_symlink,
-                               skip_modules=args.skip_modules,
-                               parse_only_modules=args.parse_only_modules,
-                               rfcxml=args.rfcxml,
-                               extract_code_snippets=args.extract_code_snippets,
-                               code_snippets_dir=args.code_snippets_dir,
-                               add_line_refs=args.add_line_refs,
-                               )
+    extracted_models = xym(args.source,
+                           args.srcdir,
+                           args.dstdir,
+                           args.strict,
+                           args.strict_name,
+                           args.strict_examples,
+                           args.debug,
+                           force_revision_pyang=args.force_revision_pyang,
+                           force_revision_regexp=args.force_revision_regexp,
+                           extract_semver=args.extract_semver,
+                           semver_symlink=args.semver_symlink,
+                           skip_modules=args.skip_modules,
+                           parse_only_modules=args.parse_only_modules,
+                           rfcxml=args.rfcxml,
+                           extract_code_snippets=args.extract_code_snippets,
+                           code_snippets_dir=args.code_snippets_dir,
+                           add_line_refs=args.add_line_refs,
+                           )
     if len(extracted_models) > 0:
         if args.strict:
             print("Created the following models that conform to the strict guidelines:")
@@ -118,7 +119,7 @@ def run():
                 r'^(?:http|ftp)s?://'  # http:// or https://
                 r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain
                 r'localhost|'  # localhost...
-                r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+                r'\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
                 r'(?::\d+)?'  # optional port
                 r'(?:/?|[/?]\S+)$', re.IGNORECASE)
             fqfn = args.dstdir + '/yang.dict'
