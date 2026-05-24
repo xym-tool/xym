@@ -175,7 +175,7 @@ class YangModuleExtractor:
 
                 if extract_semver and mver == '' and mrev != '':
                     m = re.search(
-                        r'''^\s*\w+:version\s+['"]?([0-9]+[.][0-9]+[.][0-9]+(_(non_)?compatible)?(-[A-Za-z0-9.-]+[.-][0-9]+)?([+][A-Za-z0-9.-]+)?)['"]?''',
+                        r'''^\s*\w+:version\s+['"]?([0-9]+[.][0-9]+[.][0-9]+(_(non_)?compatible)?(-[A-Za-z0-9.-]+)?([+][A-Za-z0-9.-]+)?)['"]?''',
                         line,
                     )
                     if m:
@@ -299,7 +299,7 @@ class YangModuleExtractor:
                         (real_model_name_revision, real_model_semver) = real_model_name_revision.split('#')
                         if ' ' in real_model_semver:
                             real_model_semver = real_model_semver.split(' ')[0]
-                        real_model_semver = '#' + real_model_semver
+                        real_model_semver = '@' + real_model_semver
                         real_model_name = real_model_name_revision.split('@')[0]
                         real_model_name_semver = real_model_name + real_model_semver + '.yang'
                         self.copy_to_semver(model, real_model_name_semver, semver_symlink)
@@ -953,8 +953,8 @@ if __name__ == "__main__":
                              "If it doesnt it will automatically add the correct revision to the filename using regular"
                              " expression")
     parser.add_argument("--extract-semver", action='store_true', default=False,
-                        help="Optional: if True it will extract the YANG Semver information from the YANG module and"
-                        "create a copy of the module as <module>#<semver>.yang.")
+                        help="Optional: if True it will extract the YANG Semver information from the YANG module and "
+                        "create a copy of the module as <module>@<semver>.yang.")
     parser.add_argument("--semver-symlink", action='store_true', default=False,
                         help="Optional: if True it will create a symlink of the YANG Semver version of the module rather "
                         "than a copy.  This requires --extract-semver")

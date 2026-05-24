@@ -51,8 +51,8 @@ def run():
              "If it doesnt it will automatically add the correct revision to the filename using regular"
              " expression")
     parser.add_argument("--extract-semver", action='store_true', default=False,
-        help="Optional: if True it will extract the YANG Semver information from the YANG module and"
-        "create a copy of the module as <module>#<semver>.yang.")
+        help="Optional: if True it will extract the YANG Semver information from the YANG module and "
+        "create a copy of the module as <module>@<semver>.yang.")
     parser.add_argument("--semver-symlink", action='store_true', default=False,
         help="Optional: if True it will create a symlink of the YANG Semver version of the module rather "
         "than a copy.  This requires --extract-semver")
