@@ -189,7 +189,7 @@ class YangModuleExtractor:
 
         return mname + mrev + mver
 
-    def get_extracted_models(self, force_revision_pyang, force_revision_regexp, extract_semver, semver_symlink):
+    def get_extracted_models(self, force_revision_pyang, force_revision_regexp, extract_semver=False, semver_symlink=False):
         if force_revision_pyang or force_revision_regexp:
             models = []
             models.extend(self.extracted_models)
