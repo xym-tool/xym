@@ -413,6 +413,9 @@ class YangModuleExtractor:
         # Write the model to file
         output = ''.join(self.post_process_model(mdl, self.add_line_refs))
         if fn:
+            if os.path.basename(fn) != fn or fn in (os.curdir, os.pardir):
+                self.error("File name '%s' is not a relative file name.  YANG module not created" % fn)
+                return
             fqfn = self.dst_dir + '/' + fn
             if os.path.isfile(fqfn):
                 self.error("File '%s' exists" % fqfn)
